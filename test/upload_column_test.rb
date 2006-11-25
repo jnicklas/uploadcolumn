@@ -663,4 +663,32 @@ class UploadColumnTest < Test::Unit::TestCase
     assert File.exists?( old_path ) 
   end
   
+  def test_delete_single_files
+    Entry.upload_column( :image, :store_dir_append_id => false, :versions => [ :thumb, :large ] )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    assert File.exists?( e.image.thumb.path )
+    e.image.delete
+    assert !File.exists?( e.image.path )
+    assert !File.exists?( e.image.thumb.path )
+    assert_nil e.image.dir
+    assert File.exists?( e.image.store_dir )
+  end
+  
+  def test_delete_whole_directory
+    Entry.upload_column( :image, :versions => [ :thumb, :large ] )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    assert File.exists?( e.image.thumb.path )
+    e.image.delete
+    assert !File.exists?( e.image.path )
+    assert !File.exists?( e.image.thumb.path )
+    assert e.image.dir
+    assert !File.exists?( e.image.store_dir )
+  end
+  
 end
