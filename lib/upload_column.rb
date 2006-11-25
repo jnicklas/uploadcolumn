@@ -589,7 +589,7 @@ module UploadColumn
           old_file = uploaded_file.dup if uploaded_file
           uploaded_file ||= column_class.new(options, self, attr)
           # We simply write over the temp version if it exists
-          if uploaded_file.assign(file)
+          if file and not file.blank? and uploaded_file.assign(file)
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
