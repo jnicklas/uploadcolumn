@@ -38,15 +38,15 @@ And that's it! Your uploads are up and running (hopefully) and you should now be
 
 You won't always want to store the pictures in the directory that upload_column selects for you, but that's not a problem, because changing that directory is trivial. You can pass a <tt>:store_dir</tt> key to the upload_column declaration, this will override the default mechanism and always use that directory as the basis.
 
-    upload_column :picture, :store_dir => "public/images/user_pictures"
+    upload_column :picture, :store_dir => "images/user_pictures"
     
 might be sensible in our case. By default upload_column will create a directory labeled after the associated object's id and save the image to that directory. So if our user has id 5, then the image would actually be saved to
-    public/images/user_pictures/5
+    images/user_pictures/5
 This can easily be turned off by specifying
-    upload_column :picture, :store_dir => "public/images/user_pictures", :store_dir_append_id => false
+    upload_column :picture, :store_dir => "images/user_pictures", :store_dir_append_id => false
 If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a callback method. In our case the method would be called +picture_store_dir+. Just append +_store_dir+ to your upload_column field.
     def picture_store_dir
-      "public/images/#{self.category.name}"
+      "images/#{self.category.name}"
     end
 You can even specifify a different directory for storing the temporary files if you should need to, just pass a <tt>:tmp_dir</tt> key to upload_column. There usually should't be a need for this.
 
