@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>test_correct_extension (FileColumnTest)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File test/file_column_test.rb, line 153</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">test_correct_extension</span>
+    <span class="ruby-identifier">file</span> = <span class="ruby-constant">FileColumn</span><span class="ruby-operator">::</span><span class="ruby-constant">TempUploadedFile</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">FileColumn</span><span class="ruby-operator">::</span><span class="ruby-constant">ClassMethods</span><span class="ruby-operator">::</span><span class="ruby-constant">DEFAULT_OPTIONS</span>, <span class="ruby-keyword kw">nil</span>, <span class="ruby-keyword kw">nil</span>)
+    
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;filename.jpg&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;filename.jpeg&quot;</span>,<span class="ruby-value str">&quot;jpg&quot;</span>)
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;filename.tar.gz&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;filename.jpg&quot;</span>,<span class="ruby-value str">&quot;tar.gz&quot;</span>)
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;filename.jpg&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;filename.tar.gz&quot;</span>,<span class="ruby-value str">&quot;jpg&quot;</span>)
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;Protokoll_01.09.2005.doc&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;Protokoll_01.09.2005&quot;</span>,<span class="ruby-value str">&quot;doc&quot;</span>)
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;strange.filenames.exist.jpg&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;strange.filenames.exist&quot;</span>,<span class="ruby-value str">&quot;jpg&quot;</span>)
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value str">&quot;another.strange.one.jpg&quot;</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">correct_extension</span>(<span class="ruby-value str">&quot;another.strange.one.png&quot;</span>,<span class="ruby-value str">&quot;jpg&quot;</span>)
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

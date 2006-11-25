@@ -1,0 +1,6 @@
+valid_entry:
+  image: kerb.jpg
+  file: pict.png
+blank_entry:
+  image: ""
+  file: ""

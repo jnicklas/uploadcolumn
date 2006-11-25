@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>assign (UploadColumn::UploadedFile)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/upload_column.rb, line 140</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">assign</span>(<span class="ruby-identifier">file</span>, <span class="ruby-identifier">directory</span> = <span class="ruby-keyword kw">nil</span> )
+      <span class="ruby-keyword kw">unless</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+          <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">false</span>
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
+            <span class="ruby-comment cmt"># if file is a non-empty string it is most probably</span>
+            <span class="ruby-comment cmt"># the filename and the user forgot to set the encoding</span>
+            <span class="ruby-comment cmt"># to multipart/form-data. Since we would raise an exception</span>
+            <span class="ruby-comment cmt"># because of the missing &quot;original_filename&quot; method anyways,</span>
+            <span class="ruby-comment cmt"># we raise a more meaningful exception rightaway.</span>
+            <span class="ruby-identifier">raise</span> <span class="ruby-constant">TypeError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;Do not know how to handle a string with value '#{file}' that was passed to an upload_column. Check if the form's encoding has been set to 'multipart/form-data'.&quot;</span>)
+          <span class="ruby-keyword kw">end</span>
+      
+          <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">original_filename</span> <span class="ruby-operator">!=</span> <span class="ruby-value str">&quot;&quot;</span>
+      
+            <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">dir</span> = <span class="ruby-identifier">directory</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">join_path</span>( <span class="ruby-identifier">options</span>[<span class="ruby-identifier">:tmp_dir</span>], <span class="ruby-identifier">generate_temp_name</span> )            
+      
+            <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkpath</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">store_dir</span>)
+            
+            <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">filename</span> = <span class="ruby-identifier">file</span>.<span class="ruby-identifier">original_filename</span>
+
+            <span class="ruby-comment cmt"># stored uploaded file into self.path</span>
+            <span class="ruby-comment cmt"># If it was a Tempfile object, the temporary file will be</span>
+            <span class="ruby-comment cmt"># cleaned up automatically, so we do not have to care for this</span>
+            <span class="ruby-comment cmt"># Large files will be passed as tempfiles, whereas small ones</span>
+            <span class="ruby-comment cmt"># will be passed as StringIO</span>
+            <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:local_path</span>) <span class="ruby-keyword kw">and</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">local_path</span> <span class="ruby-keyword kw">and</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exists?</span>(<span class="ruby-identifier">file</span>.<span class="ruby-identifier">local_path</span>)
+              <span class="ruby-identifier">fix_file_extension</span>( <span class="ruby-identifier">file</span>, <span class="ruby-identifier">file</span>.<span class="ruby-identifier">local_path</span> )
+              <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">copy_file</span>( <span class="ruby-identifier">file</span>.<span class="ruby-identifier">local_path</span>, <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">path</span> )
+            <span class="ruby-keyword kw">elsif</span> <span class="ruby-identifier">file</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">:read</span>)
+              <span class="ruby-identifier">fix_file_extension</span>( <span class="ruby-identifier">file</span>, <span class="ruby-keyword kw">nil</span> )
+              <span class="ruby-identifier">file</span>.<span class="ruby-identifier">rewind</span> <span class="ruby-comment cmt"># Make sure we are at the beginning of the buffer</span>
+              <span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">path</span>, <span class="ruby-value str">&quot;wb&quot;</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">f</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">file</span>.<span class="ruby-identifier">read</span>) }
+            <span class="ruby-keyword kw">else</span>
+              <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;Do not know how to handle #{file.inspect}&quot;</span>)
+            <span class="ruby-keyword kw">end</span>
+                  
+            <span class="ruby-identifier">versions</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">v</span><span class="ruby-operator">|</span> <span class="ruby-identifier">v</span>.<span class="ruby-identifier">assign</span>(<span class="ruby-identifier">file</span>, <span class="ruby-identifier">dir</span>) } <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">versions</span>
+            
+            <span class="ruby-keyword kw">return</span> <span class="ruby-keyword kw">true</span>
+          <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

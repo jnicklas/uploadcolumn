@@ -1,0 +1,35 @@
+module UploadColumnRenderHelper
+  
+  # You can use +render_image+ in your controllers to render an image
+  #     def picture
+  #       @user = User.find(params[:id])
+  #       render_image @user.picture
+  #     end
+  # This of course, is not very useful at all (you could simply have linked to the image itself),
+  # However it is even possible to pass a block to render_image that allows manipulation using
+  # RMagick, here the fun begins:
+  #     def solarize_picture
+  #       @user = User.find(params[:id])
+  #       render_image @user.picture do |img|
+  #         img = img.segment
+  #         img.solarize
+  #       end
+  #     end
+  # Note that like in UploadColumn::BaseUploadedFile.process you will need to 'carry' the image
+  # since most Rmagick methods do not modify the image itself but rather return the result of the
+  # transformation.
+  #
+  # Instead of passing an upload_column object to +render_image+ you can even pass a path,
+  # if you do you will have to pass a mime-type as well though.
+  def render_image( file, mime_type = nil )
+      mime_type ||= file.mime_type
+      path = if file.is_a?( String ) then file else file.path end
+      @headers["Content-Type"] = mime_type
+      
+      img = ::Magick::Image::read(path).first
+      
+      img = yield( img ) if block_given?
+      
+      render :text => img.to_blob, :layout => false
+  end
+end

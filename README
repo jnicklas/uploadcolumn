@@ -1,0 +1,136 @@
+=Upload_column
+
+Upload_column is a plugin for the Ruby on Rails framework that enables easy uploading of files, especially images.
+
+Suppose you have a list of users, and you would like to associate a picture to each of them. You could upload the image to a database, or you could use upload_column for simple storage to the file system.
+
+Let's create our database first, generate a migration (if you're not using migrations yet you are missing out!) and add
+
+    create_table "users" do |t|
+      t.column "name", :string
+      t.column "picture", :string
+    end
+
+Now generate a scaffold for your user class
+
+Create your model class and add the upload_column method call:
+
+    class User < ActiveRecord::Base
+      upload_column :picture
+    end
+
+Have a look at UploadColumn::ClassMethods.upload_column to find out more about specialized options. Note that the picture column in the database will not store the actual picture, it will only store the filename.
+
+Now just open up your _form.rhtml partial, and edit it so it looks like the following:
+
+    <p><label for="user_picture">Picture</label><br/>
+    <%= upload_column_field 'user', 'picture'  %></p>
+    
+Here we're making a call to UploadColumnHelper.upload_column_field, this will create an input field of the file type.
+
+We'll need to set the form to multipart, so that the picture will actually be sent as well. In new.rhtml change the +start_form_tag+ declaration to something like:
+
+    <%= start_form_tag( { :action => 'create' }, { :multipart => true } ) %>
+
+And that's it! Your uploads are up and running (hopefully) and you should now be able to add pictures to your users. The madness doesn't stop there of course!
+
+== Storage Path
+
+You won't always want to store the pictures in the directory that upload_column selects for you, but that's not a problem, because changing that directory is trivial. You can pass a <tt>:store_dir</tt> key to the upload_column declaration, this will override the default mechanism and always use that directory as the basis.
+
+    upload_column :picture, :store_dir => "public/images/user_pictures"
+    
+might be sensible in our case. By default upload_column will create a directory labeled after the associated object's id and save the image to that directory. So if our user has id 5, then the image would actually be saved to
+    public/images/user_pictures/5
+This can easily be turned off by specifying
+    upload_column :picture, :store_dir => "public/images/user_pictures", :store_dir_append_id => false
+If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a callback method. In our case the method would be called +picture_store_dir+. Just append +_store_dir+ to your upload_column field.
+    def picture_store_dir
+      "public/images/#{self.category.name}"
+    end
+You can even specifify a different directory for storing the temporary files if you should need to, just pass a <tt>:tmp_dir</tt> key to upload_column. There usually should't be a need for this.
+
+== Manipulating image with RMagick
+
+Say you would want (for whatever reason) to have a funky solarize effect on your users' images. Manipulating images with upload_column can be done either at runtime or after the image is saved, let's look at some possibilities:
+
+    class User < ActiveRecord::Base
+      upload_column :picture
+      
+      def picture_after_assign
+        picture.process! do |img|
+          img.solarize
+        end      
+      end
+    end
+
+Or maybe we want different versions of our image, then we could simply specify:
+ 
+    class User < ActiveRecord::Base
+      upload_column :picture, :versions => [ :solarized, :sepiatoned ]
+      
+      def picture_after_assign
+        picture.solarized.process! do |img|
+          img.solarize
+        end
+        picture.sepiatoned.process! do |img|
+          img.sepiatone
+        end
+      end
+    end
+
+Or maybe we just want the image in different sizes?
+
+    class User < ActiveRecord::Base
+      upload_column :picture, :versions => { :thumb => "100x100", :large => "200x300" }
+  
+      def picture_after_assign
+        picture.thumb.process! do |img|
+          img.solarize
+        end
+      end
+  
+    end
+
+== Runtime rendering
+
+You can manipulate images at runtime (it's a huge performance hit though!). In your controller add an action and use UploadColumnRenderHelper.render_image.
+
+    def sepiatone
+      @user = User.find(parms[:id])
+      render_image @user.picture do |img|
+        img.sepiatone
+      end
+    end
+    
+And that's it!
+
+In your view, you can use UploadColumnHelper.image to easily create an image tag for your action:
+
+    <%= image :action => "sepiatone", :id => 5 %>
+    
+== Views
+
+If your uploaded file is an image you would most likely want to display it in your view, if it's another kind of file you'll want to link to it. Both of these are easy using UploadColumn::BaseUploadedFile.url.
+
+    <%= link_to "Guitar Tablature", @song.tab.url %>
+    
+    <%= image_tag @user.picture.url %>
+      
+== Validations
+
+You can use SOME of Rails validations with UploadColumn
+
+validates_presence_of and validates_size_of have been verified to work. 
+
+    validates_size_of :image, :maximum => 200000, :message => "is too big, must be smaller than 200kB!"
+
+Remember to change the error message, the default one sounds a bit stupid with UploadColumn.
+
+validates_uniqueness_of does NOT work, this is because validates_uniqueness_of will send(:your_upload_column) instead of asking for the instance variable, thus it will get an UploadedFile object, which it can't really compare to other values in the database, this is rather difficult to work around without messing with Rails internals (if you manage, please let me know!). Meanwhile you could do
+
+    validates_each :your_upload_column do |record, attr, value|    
+      record.errors.add attr, 'already exists!' if YourModel.find( :first, :conditions => ["#{attr.to_s} = ?", value ] )
+    end
+
+It's not elegant I know, but it should work.

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Module: UploadColumn</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+    <div id="classHeader">
+        <table class="header-table">
+        <tr class="top-aligned-row">
+          <td><strong>Module</strong></td>
+          <td class="class-name-in-header">UploadColumn</td>
+        </tr>
+        <tr class="top-aligned-row">
+            <td><strong>In:</strong></td>
+            <td>
+                <a href="../files/lib/upload_column_rb.html">
+                lib/upload_column.rb
+                </a>
+        <br />
+            </td>
+        </tr>
+
+        </table>
+    </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+
+
+   </div>
+
+
+  </div>
+
+
+    <!-- if includes -->
+
+    <div id="section">
+
+    <div id="class-list">
+      <h3 class="section-bar">Classes and Modules</h3>
+
+      Module <a href="UploadColumn/ClassMethods.html" class="link">UploadColumn::ClassMethods</a><br />
+Class <a href="UploadColumn/UploadedFile.html" class="link">UploadColumn::UploadedFile</a><br />
+
+    </div>
+
+    <div id="constants-list">
+      <h3 class="section-bar">Constants</h3>
+
+      <div class="name-list">
+        <table summary="Constants">
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">MIME_EXTENSIONS</td>
+          <td>=</td>
+          <td class="context-item-value">{     &quot;image/gif&quot; =&gt; &quot;gif&quot;,     &quot;image/jpeg&quot; =&gt; &quot;jpg&quot;,     &quot;image/pjpeg&quot; =&gt; &quot;jpg&quot;,     &quot;image/x-png&quot; =&gt; &quot;png&quot;,     &quot;image/jpg&quot; =&gt; &quot;jpg&quot;,     &quot;image/png&quot; =&gt; &quot;png&quot;,     &quot;application/x-shockwave-flash&quot; =&gt; &quot;swf&quot;,     &quot;application/pdf&quot; =&gt; &quot;pdf&quot;,     &quot;application/pgp-signature&quot; =&gt; &quot;sig&quot;,     &quot;application/futuresplash&quot; =&gt; &quot;spl&quot;,     &quot;application/msword&quot; =&gt; &quot;doc&quot;,     &quot;application/postscript&quot; =&gt; &quot;ps&quot;,     &quot;application/x-bittorrent&quot; =&gt; &quot;torrent&quot;,     &quot;application/x-dvi&quot; =&gt; &quot;dvi&quot;,     &quot;application/x-gzip&quot; =&gt; &quot;gz&quot;,     &quot;application/x-ns-proxy-autoconfig&quot; =&gt; &quot;pac&quot;,     &quot;application/x-shockwave-flash&quot; =&gt; &quot;swf&quot;,     &quot;application/x-tgz&quot; =&gt; &quot;tar.gz&quot;,     &quot;application/x-tar&quot; =&gt; &quot;tar&quot;,     &quot;application/zip&quot; =&gt; &quot;zip&quot;,     &quot;audio/mpeg&quot; =&gt; &quot;mp3&quot;,     &quot;audio/x-mpegurl&quot; =&gt; &quot;m3u&quot;,     &quot;audio/x-ms-wma&quot; =&gt; &quot;wma&quot;,     &quot;audio/x-ms-wax&quot; =&gt; &quot;wax&quot;,     &quot;audio/x-wav&quot; =&gt; &quot;wav&quot;,     &quot;image/x-xbitmap&quot; =&gt; &quot;xbm&quot;,                  &quot;image/x-xpixmap&quot; =&gt; &quot;xpm&quot;,                  &quot;image/x-xwindowdump&quot; =&gt; &quot;xwd&quot;,                  &quot;text/css&quot; =&gt; &quot;css&quot;,                  &quot;text/html&quot; =&gt; &quot;html&quot;,                               &quot;text/javascript&quot; =&gt; &quot;js&quot;,     &quot;text/plain&quot; =&gt; &quot;txt&quot;,     &quot;text/xml&quot; =&gt; &quot;xml&quot;,     &quot;video/mpeg&quot; =&gt; &quot;mpeg&quot;,     &quot;video/quicktime&quot; =&gt; &quot;mov&quot;,     &quot;video/x-msvideo&quot; =&gt; &quot;avi&quot;,     &quot;video/x-ms-asf&quot; =&gt; &quot;asf&quot;,     &quot;video/x-ms-wmv&quot; =&gt; &quot;wmv&quot;</td>
+          <td width="3em">&nbsp;</td>
+          <td class="context-item-desc">
+default mapping of mime-types to file extensions. FileColumn will try to
+rename a file to the correct extension if it detects a known mime-type
+
+</td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">EXTENSIONS</td>
+          <td>=</td>
+          <td class="context-item-value">Set.new MIME_EXTENSIONS.values</td>
+        </tr>
+        <tr class="top-aligned-row context-row">
+          <td class="context-item-name">DEFAULT_OPTIONS</td>
+          <td>=</td>
+          <td class="context-item-value">{     :root_path =&gt; File.join(RAILS_ROOT, &quot;public&quot;),     :web_root =&gt; &quot;&quot;,     :mime_extensions =&gt; MIME_EXTENSIONS,     :extensions =&gt; EXTENSIONS,     :fix_file_extensions =&gt; true,     :store_dir =&gt; nil,     :store_dir_append_id =&gt; true,     :replace_old_files =&gt; true,     :tmp_dir =&gt; &quot;tmp&quot;,     # path to the unix &quot;file&quot; executbale for     # guessing the content-type of files     :file_exec =&gt; &quot;file&quot;</td>
+          <td width="3em">&nbsp;</td>
+          <td class="context-item-desc">
+default options. You can override these with <tt>file_column</tt>&#8217;s
+<tt>options</tt> parameter
+
+</td>
+        </tr>
+        </table>
+      </div>
+    </div>
+
+
+
+      
+
+
+    <!-- if method_list -->
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>

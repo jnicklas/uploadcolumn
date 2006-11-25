@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>delete (UploadColumn::UploadedFile)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/upload_column.rb, line 442</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">delete</span>
+      <span class="ruby-identifier">file</span> = <span class="ruby-identifier">clone_as</span> <span class="ruby-constant">NoUploadedFile</span>
+      <span class="ruby-ivar">@instance</span>[<span class="ruby-ivar">@attr</span>] = <span class="ruby-keyword kw">nil</span>
+      <span class="ruby-identifier">file</span>.<span class="ruby-identifier">on_save</span> { <span class="ruby-identifier">delete_files</span> }
+      <span class="ruby-identifier">file</span>
+    <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

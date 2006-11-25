@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>test_absolute_path_is_simple (FileColumnTest)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File test/file_column_test.rb, line 201</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">test_absolute_path_is_simple</span>
+    <span class="ruby-comment cmt"># we make :root_path more complicated to test that it is normalized in absolute paths</span>
+    <span class="ruby-constant">Entry</span>.<span class="ruby-identifier">file_column</span> <span class="ruby-identifier">:image</span>, {<span class="ruby-identifier">:root_path</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-constant">RAILS_ROOT</span>, <span class="ruby-value str">&quot;public&quot;</span>) <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;/../public&quot;</span> }
+    
+    <span class="ruby-identifier">e</span> = <span class="ruby-constant">Entry</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">e</span>.<span class="ruby-identifier">image</span> = <span class="ruby-identifier">uploaded_file</span>(<span class="ruby-identifier">file_path</span>(<span class="ruby-value str">&quot;kerb.jpg&quot;</span>), <span class="ruby-value str">&quot;image/jpeg&quot;</span>, <span class="ruby-value str">&quot;kerb.jpg&quot;</span>)
+    <span class="ruby-identifier">assert</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exists?</span>(<span class="ruby-identifier">e</span>.<span class="ruby-identifier">image</span>)
+    <span class="ruby-identifier">assert</span> <span class="ruby-identifier">e</span>.<span class="ruby-identifier">image</span> <span class="ruby-operator">!~</span> <span class="ruby-regexp re">/\.\./</span>, <span class="ruby-node">&quot;#{e.image} is not a simple path&quot;</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
