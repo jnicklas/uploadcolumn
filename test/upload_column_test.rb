@@ -79,6 +79,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal true, e.image.options[:store_dir_append_id]
     assert_equal true, e.image.options[:replace_old_files]
     assert_equal "tmp", e.image.options[:tmp_dir]
+    assert_equal :accumulate, e.image.options[:old_files]
   end
   
   def test_assign_without_save_with_tempfile
@@ -595,5 +596,71 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal e.image.mime_type, "image/png"
   end
   
+  def test_old_files_accumulate
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    old_path = e.image.path
+    e.image = uploaded_file("skanthak.png", "image/png")
+    assert e.save
+    assert File.exists?( e.image.path )
+    somewhat_newer_path = e.image.path
+    assert File.exists?( old_path )
+    assert e.destroy
+    assert !File.exists?( somewhat_newer_path )
+    assert !File.exists?( old_path )
+  end
+  
+  def test_old_files_replace
+    Entry.upload_column( :image, :old_files => :replace )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    old_path = e.image.path
+    e.image = uploaded_file("skanthak.png", "image/png")
+    assert e.save
+    assert File.exists?( e.image.path )
+    somewhat_newer_path = e.image.path
+    assert !File.exists?( old_path )
+    assert e.destroy
+    assert File.exists?( somewhat_newer_path )
+    assert !File.exists?( old_path ) 
+  end
+
+  def test_old_files_delete
+    Entry.upload_column( :image, :old_files => :delete )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    old_path = e.image.path
+    e.image = uploaded_file("skanthak.png", "image/png")
+    assert e.save
+    assert File.exists?( e.image.path )
+    somewhat_newer_path = e.image.path
+    assert !File.exists?( old_path )
+    assert e.destroy
+    assert !File.exists?( somewhat_newer_path )
+    assert !File.exists?( old_path ) 
+  end
+  
+  def test_old_files_keep
+    Entry.upload_column( :image, :old_files => :keep )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert e.save
+    assert File.exists?( e.image.path )
+    old_path = e.image.path
+    e.image = uploaded_file("skanthak.png", "image/png")
+    assert e.save
+    assert File.exists?( e.image.path )
+    somewhat_newer_path = e.image.path
+    assert File.exists?( old_path )
+    assert e.destroy
+    assert File.exists?( somewhat_newer_path )
+    assert File.exists?( old_path ) 
+  end
   
 end

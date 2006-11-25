@@ -76,6 +76,7 @@ module UploadColumn
     :store_dir_append_id => true,
     :replace_old_files => true,
     :tmp_dir => "tmp",
+    :old_files => :accumulate
   }.freeze
 
   # = Basics
@@ -523,7 +524,7 @@ module UploadColumn
     # [+extensions+] Overwirte UploadColumns default list of extensions that may be uploaded
     # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, this will NOT throw out files with an incorrect extension, it will NOT secure you against binaries and other vicious files, use +validates_integrity_of+ if you need more security! Defaults to true
     # [+store_dir_append_id+] Append a directory labeled with the records ID to the path where the file is stored, defaults to true
-    # [+replace_old_files+] Replace old files when a new file is uploaded, defaults to true, currently not implemented!
+    # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:accumulate</tt>, <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. If it's set to :accumulate, which is the default option, then all new files will be kept, but the files will be deleted when the associated object is destroyed.
     # [+tmp_base_dir+] The base directory where the image temp files are stored, defaults to "tmp"
     def upload_column(attr, options={})
       register_functions( attr, UploadedFile, options )
@@ -585,12 +586,16 @@ module UploadColumn
           instance_variable_set upload_column_attr, nil
         else
           uploaded_file = instance_variable_get( upload_column_attr )
+          old_file = uploaded_file.dup if uploaded_file
           uploaded_file ||= column_class.new(options, self, attr)
           # We simply write over the temp version if it exists
           if uploaded_file.assign(file)
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
+            if old_file and [ :replace, :delete ].include?(options[:old_files])
+              old_file.delete
+            end
           end
         end
       end
@@ -639,7 +644,7 @@ module UploadColumn
   
       define_method after_destroy_method do
         uploaded_file = send(upload_column_method)
-        uploaded_file.delete if uploaded_file
+        uploaded_file.delete if uploaded_file and not [ :keep, :replace ].include?(options[:old_files])
       end
       after_destroy after_destroy_method
   
