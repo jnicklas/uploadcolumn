@@ -168,10 +168,10 @@ class UploadColumnTest < Test::Unit::TestCase
   def test_do_not_fix_file_extensions
     Entry.upload_column :image, :fix_file_extensions => false
     e = Entry.new
-    e.image = uploaded_file("kerb.jpeg") # no content type passed
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb.jpeg")
     assert_equal "kerb.jpeg", e.image.filename
     assert_equal "kerb.jpeg", e["image"]
-    e.image = uploaded_file("kerb") # no content type passed
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb")
     assert_equal "kerb", e.image.filename
     assert_equal "kerb", e["image"]
   end
