@@ -118,35 +118,35 @@ class UploadColumnTest < Test::Unit::TestCase
   
   def test_extension_added
     e = Entry.new
-    e.image = uploaded_file("kerb", "image/jpeg")
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb")
     assert_equal "kerb.jpg", e.image.filename
     assert_equal "kerb.jpg", e["image"]
   end
   
   def test_extension_unknown_type
     e = Entry.new
-    e.image = uploaded_file("kerb", "not/known")
+    e.image = uploaded_file("kerb.jpg", "not/known", "kerb")
     assert_equal "kerb", e.image.filename
     assert_equal "kerb", e["image"]
   end
 
   def test_extension_unknown_type_with_extension
     e = Entry.new
-    e.image = uploaded_file("kerb.abc", "not/known")
+    e.image = uploaded_file("kerb.jpg", "not/known", "kerb.abc")
     assert_equal "kerb.abc", e.image.filename
     assert_equal "kerb.abc", e["image"]
   end
 
   def test_extension_corrected
     e = Entry.new
-    e.image = uploaded_file("kerb.jpeg", "image/jpeg")
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb.jpeg")
     assert_equal "kerb.jpg", e.image.filename
     assert_equal "kerb.jpg", e["image"]
   end
 
   def test_double_extension
     e = Entry.new
-    e.image = uploaded_file("kerb.jpg", "application/x-tgz")
+    e.image = uploaded_file("kerb.jpg", "application/x-tgz", "kerb.tar.gz")
     assert_equal "kerb.tar.gz", e.image.filename
     assert_equal "kerb.tar.gz", e["image"]
   end

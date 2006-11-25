@@ -2,8 +2,12 @@ require File.join(File.dirname(__FILE__), 'abstract_unit')
 
 #:nodoc:
 
-I1 = "pict.png"
-I2 = "skanthak.png"
+Image1 = "pict.png"
+Image2 = "skanthak.png"
+Mime1 = "image/png"
+Mime2 = "image/png"
+ImageInvalid = "invalid-image.jpg"
+MimeInvalid = "image/jpeg"
 
 class Entry < ActiveRecord::Base
 end
@@ -16,12 +20,12 @@ class UploadColumnProcessTest < Test::Unit::TestCase
   
   def teardown
     TestMigration.down
-    FileUtils.rm_rf File.dirname(__FILE__)+"/public/entry/"
+    FileUtils.rm_rf File.dirname(__FILE__)+"/public/images"
   end
   
   def test_process_before_save
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime2)
     img = e.image.process do |img|
       img.crop_resized(50, 50)
     end
@@ -32,7 +36,7 @@ class UploadColumnProcessTest < Test::Unit::TestCase
   
   def test_process_after_save
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime2)
     assert e.save
     img = e.image.process do |img|
       img.crop_resized(50, 50)
@@ -44,7 +48,7 @@ class UploadColumnProcessTest < Test::Unit::TestCase
   
   def test_process_exclamation_before_save
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime2)
     e.image.process! do |img|
       img.crop_resized(50, 50)
     end
@@ -56,7 +60,7 @@ class UploadColumnProcessTest < Test::Unit::TestCase
   
   def test_process_exclamation_after_save
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime2)
     assert e.save
     e.image.process! do |img|
       img.crop_resized(50, 50)
@@ -81,7 +85,7 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
   
   def test_assign
     e = Entry.new
-    e.image = uploaded_file(I1, "image/png")
+    e.image = uploaded_file(Image1, Mime1)
     assert_not_nil e.image
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
@@ -102,7 +106,7 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
 
   def test_resize_without_save
     e = Entry.new
-    e.image = uploaded_file(I1, "image/png")
+    e.image = uploaded_file(Image1, Mime1)
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
     thumb = read_image(e.image.thumb.path)
@@ -116,7 +120,7 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
 
   def test_simple_resize_with_save
     e = Entry.new
-    e.image = uploaded_file(I1, "image/png")
+    e.image = uploaded_file(Image1, Mime1)
     e.save
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
@@ -131,15 +135,15 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
 
   def test_resize_on_saved_image
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime1)
     assert e.save
     e.reload
     old_path = e.image.path
     
-    e.image = uploaded_file(I1, "image/png")
+    e.image = uploaded_file(Image1, Mime1)
     assert e.save
     assert_not_equal e.image.path, old_path
-    assert I1, e.image.filename
+    assert Image1, e.image.filename
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
     thumb = read_image(e.image.thumb.path)
@@ -154,7 +158,7 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
   def test_invalid_image
     e = Entry.new
     assert_nothing_raised do
-      e.image = uploaded_file("invalid-image.jpg", "image/jpeg")
+      e.image = uploaded_file(ImageInvalid, MimeInvalid)
     end
     assert_nil e.image
     assert e.valid?
@@ -175,7 +179,7 @@ class ImageColumnCropTest < Test::Unit::TestCase
 
   def test_assign
     e = Entry.new
-    e.image = uploaded_file(I1, "image/png")
+    e.image = uploaded_file(Image1, Mime1)
     assert_not_nil e.image
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
@@ -196,7 +200,7 @@ class ImageColumnCropTest < Test::Unit::TestCase
 
   def test_resize_without_save
     e = Entry.new
-    e.image = uploaded_file(I1, "image/jpeg")
+    e.image = uploaded_file(Image1, Mime1)
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
     thumb = read_image(e.image.thumb.path)
@@ -210,7 +214,7 @@ class ImageColumnCropTest < Test::Unit::TestCase
 
   def test_simple_resize_with_save
     e = Entry.new
-    e.image = uploaded_file(I1, "image/jpeg")
+    e.image = uploaded_file(Image1, Mime1)
     e.save
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
@@ -225,14 +229,14 @@ class ImageColumnCropTest < Test::Unit::TestCase
 
   def test_resize_on_saved_image
     e = Entry.new
-    e.image = uploaded_file(I2, "image/png")
+    e.image = uploaded_file(Image2, Mime2)
     assert e.save
     e.reload
     old_path = e.image
     
-    e.image = uploaded_file(I1, "image/jpeg")
+    e.image = uploaded_file(Image1, Mime1)
     assert e.save
-    assert I1, e.image.filename
+    assert Image1, e.image.filename
     assert_not_nil e.image.thumb
     assert_not_nil e.image.flat
     thumb = read_image(e.image.thumb.path)
@@ -247,7 +251,7 @@ class ImageColumnCropTest < Test::Unit::TestCase
   def test_invalid_image
     e = Entry.new
     assert_nothing_raised do
-      e.image = uploaded_file("invalid-image.jpg", "image/jpeg")
+      e.image = uploaded_file(ImageInvalid, MimeInvalid)
     end
     assert_nil e.image
     assert e.valid?

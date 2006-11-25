@@ -83,7 +83,7 @@ Or maybe we want different versions of our image, then we could simply specify:
 
 If you only want to upload images, then UploadColumn comes with a convenient method, +image_column+ works basically the same way as +upload_column+ but it is especially trimmed for work with images.
 
-The mime_extensions and extensions parameters are restricted to those used for images, so +validates_integrity_of+ can be used to easily restrict the upload process to only images.
+The mime_extensions and extensions parameters are restricted to those used for images, so +validates_integrity_of+ can be used to easily restrict uploads to images only.
 
 Most importantly if you use image_column you can resize the images automagickaly (sorry) when they are assigned, just pass a Hash, like in the following example:
 
