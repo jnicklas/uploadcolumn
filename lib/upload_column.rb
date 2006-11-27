@@ -74,9 +74,10 @@ module UploadColumn
     :fix_file_extensions => true,
     :store_dir => nil,
     :store_dir_append_id => true,
-    :replace_old_files => true,
     :tmp_dir => "tmp",
-    :old_files => :accumulate
+    :old_files => :accumulate,
+    :validate_integrity => true,
+    :file_exec => 'file'
   }.freeze
 
   # = Basics
@@ -185,9 +186,11 @@ module UploadColumn
             # will be passed as StringIO
             if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
               fix_file_extension( file, file.local_path )
+              return false unless check_integrity( self.filename_extension )
               FileUtils.copy_file( file.local_path, self.path )
             elsif file.respond_to?(:read)
               fix_file_extension( file, nil )
+              return false unless check_integrity( self.filename_extension )
               file.rewind # Make sure we are at the beginning of the buffer
               File.open(self.path, "wb") { |f| f.write(file.read) }
             else
@@ -381,6 +384,15 @@ module UploadColumn
     end
 
     private
+    
+    def check_integrity( extension )
+      if self.options[:validate_integrity]
+        unless self.options[:extensions].include?( extension )
+          return false
+        end
+      end
+      true
+    end
 
     def generate_temp_name
       now = Time.now
@@ -441,9 +453,9 @@ module UploadColumn
         begin
           content_type = `file -bi "#{local_path}"`.chomp
           return nil unless $?.success?
-          return nil if content_type =~ "cannot_open"
+          return nil if content_type =~ /cannot_open/
           # Cut off ;xyz from the result
-          content_type.gsub!(/;.+$/,"") if content_type
+          content_type.gsub!(/;.+$/,"") if content_type =~ /;.+$/
           return content_type
         rescue
           nil
@@ -515,17 +527,21 @@ module UploadColumn
     #
     #   upload_column :picture
     #
-    # +upload_column+ accepts the following options:
-    # [+versions+] Creates different versions of the file, can either be an Array, or a hash specifying different dimensions for images only (see README).
+    # +upload_column+ accepts the following common options:
+    # [+versions+] Creates different versions of the file, must be an Array, +image_column+ allows a Hash of dimensions to be passed.
     # [+store_dir+] Overwrite the default mechanism for deciding where the files are stored
+    # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:accumulate</tt>, <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. If it's set to :accumulate, which is the default option, then all new files will be kept, but the files will be deleted when the associated object is destroyed.
+    # 
+    # and even the following less common ones
     # [+root_path+] The root path where image will be stored, it will be prepended to store_dir
     # [+web_root+] Prepended to all addresses returned by UploadColumn::BaseUploadedFile.url
     # [+mime_extensions+] Overwrite UploadColumns default list of mime-type to extension mappings
     # [+extensions+] Overwirte UploadColumns default list of extensions that may be uploaded
-    # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, this will NOT throw out files with an incorrect extension, it will NOT secure you against binaries and other vicious files, use +validates_integrity_of+ if you need more security! Defaults to true
+    # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, note that this does not give you any security, to make sure that no dangerous files are uploaded, set :validate_integrity to true (it is by default). Defaults to true
     # [+store_dir_append_id+] Append a directory labeled with the records ID to the path where the file is stored, defaults to true
-    # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:accumulate</tt>, <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. If it's set to :accumulate, which is the default option, then all new files will be kept, but the files will be deleted when the associated object is destroyed.
     # [+tmp_base_dir+] The base directory where the image temp files are stored, defaults to "tmp"
+    # [+validate_integrity] If set to true, no files with an extension not included in :extensions will be uploaded, defaults to true.
+    # [+file_exec+] Path to an executable used to find out a files mime_type, works only on *nix based systems. Defaults to 'file'
     def upload_column(attr, options={})
       register_functions( attr, UploadedFile, options )
     end
@@ -596,6 +612,9 @@ module UploadColumn
             if old_file and [ :replace, :delete ].include?(options[:old_files])
               old_file.delete
             end
+          else
+            # Reset if something's gone wrong
+            instance_variable_set upload_column_attr, old_file
           end
         end
       end

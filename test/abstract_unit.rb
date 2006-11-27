@@ -106,3 +106,5 @@ class TestMigration < ActiveRecord::Migration
     drop_table :movies
   end
 end
+
+ActiveRecord::Migration.verbose = false

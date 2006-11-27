@@ -77,9 +77,10 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal true, e.image.options[:fix_file_extensions]
     assert_equal nil, e.image.options[:store_dir]
     assert_equal true, e.image.options[:store_dir_append_id]
-    assert_equal true, e.image.options[:replace_old_files]
     assert_equal "tmp", e.image.options[:tmp_dir]
     assert_equal :accumulate, e.image.options[:old_files]
+    assert_equal true, e.image.options[:validate_integrity]
+    assert_equal 'file', e.image.options[:file_exec]
   end
   
   def test_assign_without_save_with_tempfile
@@ -93,11 +94,19 @@ class UploadColumnTest < Test::Unit::TestCase
     do_test_assign(e)
   end
   
-  def do_test_assign(e)
+  def test_assign_twice
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    do_test_assign(e, "kerb.jpg")
+    e.image = uploaded_file("skanthak.png", "image/png")
+    do_test_assign(e)
+  end
+  
+  def do_test_assign(e, basename="skanthak.png")
     assert e.image.is_a?(UploadColumn::UploadedFile), "#{e.image.inspect} is not an UploadedFile"
     assert e.image.respond_to?(:path), "{e.image.inspect} did not respond to 'path'"
     assert File.exists?(e.image.path)
-    assert_identical e.image.path, file_path("skanthak.png")
+    assert_identical e.image.path, file_path(basename)
     assert_match %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}, e.image.relative_path
   end
   
@@ -125,14 +134,22 @@ class UploadColumnTest < Test::Unit::TestCase
   end
   
   def test_extension_unknown_type
+    Entry.upload_column :image, :file_exec => false
     e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "not/known", "kerb")
+    assert_nil e.image
+    Entry.upload_column :image, :validate_integrity => false, :file_exec => false
     e.image = uploaded_file("kerb.jpg", "not/known", "kerb")
     assert_equal "kerb", e.image.filename
     assert_equal "kerb", e["image"]
   end
 
   def test_extension_unknown_type_with_extension
+    Entry.upload_column :image, :file_exec => false
     e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "not/known", "kerb.abc")
+    assert_nil e.image
+    Entry.upload_column :image, :validate_integrity => false, :file_exec => false
     e.image = uploaded_file("kerb.jpg", "not/known", "kerb.abc")
     assert_equal "kerb.abc", e.image.filename
     assert_equal "kerb.abc", e["image"]
@@ -146,6 +163,7 @@ class UploadColumnTest < Test::Unit::TestCase
   end
 
   def test_double_extension
+    Entry.upload_column :image, :file_exec => false
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "application/x-tgz", "kerb.tar.gz")
     assert_equal "kerb.tar.gz", e.image.filename
@@ -156,18 +174,31 @@ class UploadColumnTest < Test::Unit::TestCase
 
     # run this test only if the machine we are running on
     # has the file utility installed
-    if File.executable?("file")
+    if File.executable?("/usr/bin/file")
       e = Entry.new
-      e.image = uploaded_file("kerb") # no content type passed
+      e.image = uploaded_file("kerb.jpg", nil, "kerb") # no content type passed
+      assert_not_nil e.image
       assert_equal "kerb.jpg", e.image.filename
       assert_equal "kerb.jpg", e["image"]
     else
-      puts "Warning: Skipping test_get_content_type_with_file test as 'file' does not exist"
+      puts "Warning: Skipping test_get_content_type_with_file test as '/usr/bin/file' does not exist"
     end
   end
-
+  
   def test_do_not_fix_file_extensions
     Entry.upload_column :image, :fix_file_extensions => false
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb.jpeg")
+    assert_equal "kerb.jpeg", e.image.filename
+    assert_equal "kerb.jpeg", e["image"]
+    # Assign an invalid file
+    e.image = uploaded_file("skanthak.png", "image/png", "skanthak")
+    assert_equal "kerb.jpeg", e.image.filename
+    assert_equal "kerb.jpeg", e["image"]
+  end
+
+  def test_do_not_fix_file_extensions_without_validating_integrity
+    Entry.upload_column :image, :fix_file_extensions => false, :validate_integrity => false
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb.jpeg")
     assert_equal "kerb.jpeg", e.image.filename
@@ -175,6 +206,14 @@ class UploadColumnTest < Test::Unit::TestCase
     e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb")
     assert_equal "kerb", e.image.filename
     assert_equal "kerb", e["image"]
+  end
+  
+  def test_validate_integrity
+    Entry.upload_column :image, :fix_file_extensions => false
+    e = Entry.new
+    # invalid file
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "kerb")
+    assert_nil e.image
   end
 
   def test_assign_with_save
