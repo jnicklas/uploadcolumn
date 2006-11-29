@@ -117,6 +117,32 @@ If your uploaded file is an image you would most likely want to display it in yo
     <%= link_to "Guitar Tablature", @song.tab.url %>
     
     <%= image_tag @user.picture.url %>
+
+== Magic Columns
+
+UploadColumn allows you to add 'magic' columns to your model, which will be automatically filled with the appropriate data. Just add the column, for eample via migrations:
+
+    add_column :users, :picture_mime_type
+
+And if our model looks like this:
+
+    class User < ActiveRecord::Base
+      upload_column :picture
+    end
+
+The column <tt>picture_mime_type</tt> will now automatically be filled with the file's mime-type (or at least with UploadColumn's best guess ;).
+
+The following are available for upload_column fields:
+
+[+_mime_type+] Will contain the file's mime_type
+[+_filesize+] Will contain the file's size in bytes
+
+If you use image_column you can even add:
+
+[+_width+] Will contain the image's width
+[+_height+] Will contain the image's height
+
+You can also do <tt>picture_exif_date_time</tt> or <tt>picture_exif_model</tt>, etc. if picture is an image_column and the uploaded image i a JPEG file. This requires EXIFR, which you can get by installing the gem via <tt>gem install exifr</tt>.
       
 == Validations
 

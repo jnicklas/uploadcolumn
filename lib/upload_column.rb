@@ -99,10 +99,11 @@ module UploadColumn
   #     @user.picture.thumb.url
   class UploadedFile
 
-    attr_accessor :options, :dir
+    attr_accessor :options, :dir, :mime_type
     attr_reader :instance, :attribute, :versions, :suffix, :options
 
     private :dir=
+    private :mime_type=
 
     def initialize(options, instance, attribute, dir = nil, filename = nil, suffix = nil)
       options = DEFAULT_OPTIONS.merge(options)
@@ -261,6 +262,7 @@ module UploadColumn
 
     # Guesses the mime-type of the file based on it's extension, returns a String.
     def mime_type
+      return @mime_type if @mime_type
       case filename_extension
       when "jpg":
         return "image/jpeg"
@@ -269,7 +271,7 @@ module UploadColumn
       when "png":
         return "image/png"
       else
-        MIME_EXTENSIONS.invert[filename_extension]
+        @mime_type = MIME_EXTENSIONS.invert[filename_extension]
       end
     end
 
@@ -318,11 +320,11 @@ module UploadColumn
             # Large files will be passed as tempfiles, whereas small ones
             # will be passed as StringIO
             if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
-              fix_file_extension( file, file.local_path )
+              mime_type = fix_file_extension( file, file.local_path )
               return false unless check_integrity( self.filename_extension )
               FileUtils.copy_file( file.local_path, self.path )
             elsif file.respond_to?(:read)
-              fix_file_extension( file, nil )
+              mime_type = fix_file_extension( file, nil )
               return false unless check_integrity( self.filename_extension )
               file.rewind # Make sure we are at the beginning of the buffer
               File.open(self.path, "wb") { |f| f.write(file.read) }
@@ -358,6 +360,19 @@ module UploadColumn
         self.dir = new_dir
     
         versions.each { |k, v| v.send(:save) } if versions
+      end
+    end
+    
+    def set_magic_columns(  )
+      self.instance.class.column_names.each do |column|
+        if column =~ /^#{self.attribute}_(.*)$/
+          case $1
+          when "mime_type"
+            self.instance.send("#{self.attribute}_mime_type=".to_sym, self.mime_type)
+          when "filesize"
+            self.instance.send("#{self.attribute}_filesize=".to_sym, self.size)
+          end
+        end
       end
     end
     
@@ -432,18 +447,18 @@ module UploadColumn
     # tries to identify the mime-type of file and correct self's extension
     # based on the found mime-type
     def fix_file_extension( file, local_path )
-      if options[:fix_file_extensions]
-        # try to fetch the filename via the 'file' Unix exec
-        content_type = get_content_type( local_path )
-        # Fetch the content type that was passed from the users browser
-        content_type ||= file.content_type.chomp if file.content_type
-  
-        # Is this one of our known content types?
-        if content_type and options[:mime_extensions][content_type]
-          # If so, correct the extension
-          self.filename = self.filename_base + "." + options[:mime_extensions][content_type]
-        end
+      # try to fetch the filename via the 'file' Unix exec
+      content_type = get_content_type( local_path )
+      # Fetch the content type that was passed from the users browser
+      content_type ||= file.content_type.chomp if file.content_type
+      
+      # Is this one of our known content types?
+      if content_type and options[:fix_file_extensions] and options[:mime_extensions][content_type]
+        # If so, correct the extension
+        self.filename = self.filename_base + "." + options[:mime_extensions][content_type]
       end
+      
+      content_type
     end
     
     # Try to use *nix exec to fetch content type
@@ -477,6 +492,7 @@ module UploadColumn
   # See +image_column+ and the +README+ for more info
   class UploadedImage < UploadedFile
     
+    attr_reader :width, :height
     # Resize the image so that it will not exceed the dimensions passed
     # via geometry, geometry should be a string, formatted like '200x100' where
     # the first number is the height and the second is the width
@@ -499,6 +515,52 @@ module UploadColumn
     end
     
     private
+    
+    # I eat your memory for breakfast, don't use me!
+    def width
+      unless @width
+        img = process do |img|
+          @width = img.columns
+          @height = img.rows
+        end
+        img = nil
+        GC.start
+      end
+      @width
+    end
+    
+    def height
+      unless @height
+        img = process do |img|
+          @width = img.columns
+          @height = img.rows
+        end
+        img = nil
+        GC.start
+      end
+      @height
+    end
+    
+    def set_magic_columns
+      super
+      self.instance.class.column_names.each do |column|
+        if column =~ /^#{self.attribute}_(.*)$/
+          case $1
+          when "width"
+            self.instance.send("#{self.attribute}_width=".to_sym, width)
+          when "height"
+            self.instance.send("#{self.attribute}_height=".to_sym, height)
+          when /^exif_(.*)$/
+            if self.mime_type == "image/jpeg"
+              require_gem 'exifr'
+              i = EXIFR::JPEG.new(self.path)
+              self.instance.send("#{self.attribute}_exif_#{$1}=".to_sym, i.exif[$1.to_sym])
+            end
+          end
+        end
+      end
+      
+    end
     
     def assign(file, directory = nil )
       # Call superclass method and check for success (not if this actually IS a version!)
@@ -611,6 +673,7 @@ module UploadColumn
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
+            uploaded_file.send(:set_magic_columns)
             if old_file and [ :replace, :delete ].include?(options[:old_files])
               old_file.send(:delete)
             end
