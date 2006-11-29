@@ -2,4 +2,6 @@
 
 * new :validates_integrity option replaces the old validates_integrity_of. The latter was more elegant, but posed a security risk, since files would be stored on the server in a remotely accessible location without having been validated. I tried to fix the bug, but couldn't make it work, so I opted for the less elegant, but safe solution instead.
 
-* readded the :file_exec option, it's now possible to set this manuallt again. I cut it originally, because I felt that it was unneccessary and that there were too many options already, I readded it mainly to make it possible to test the validation better.
+* readded the :file_exec option, it's now possible to set this manually again. I cut it originally, because I felt that it was unneccessary and that there were too many options already, I readded it mainly to make it possible to test the validation better.
+
+* assign, save, delete_temporary_files, delete, filename= and dir= are now all private, I see no reason why they should be public, and since they aren't really useful out of context I think it makes for a cleaner API to make them private, if you still need to use them, you can use .send(:save), etc.. instead.

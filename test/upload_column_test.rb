@@ -49,22 +49,22 @@ class UploadColumnTest < Test::Unit::TestCase
   
   def test_sanitize_filename
     e = upload_entry
-    e.image.filename = ("test.jpg")
+    e.image.send(:filename=, "test.jpg")
     assert_equal "test.jpg", e.image.filename
 
-    e.image.filename = ("test-s,%&m#st?.jpg")
+    e.image.send(:filename=, "test-s,%&m#st?.jpg")
     assert_equal "test-s___m_st_.jpg", e.image.filename, "weird signs not escaped"
 
-    e.image.filename = ("../../very_tricky/foo.bar")
+    e.image.send(:filename=, "../../very_tricky/foo.bar")
     assert e.image.filename !~ /[\\\/]/, "slashes not removed"
 
-    e.image.filename = ('`*foo')
+    e.image.send(:filename=, '`*foo')
     assert_equal "__foo", e.image.filename
 
-    e.image.filename = ('c:\temp\foo.txt')
+    e.image.send(:filename=, 'c:\temp\foo.txt')
     assert_equal "foo.txt", e.image.filename
 
-    e.image.filename = (".")
+    e.image.send(:filename=, ".")
     assert_equal "_.", e.image.filename
   end
   
@@ -606,11 +606,16 @@ class UploadColumnTest < Test::Unit::TestCase
   end
   
   def test_set_path
+    Entry.upload_column(:image, :versions => [:thumb, :large])
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    e.image.set_path("tmp/1234.56789.1234/donkey.tiff")
-    assert_equal e.image.filename, "donkey.tiff"
-    assert_equal e.image.dir, "tmp/1234.56789.1234"
+    e.image.send(:set_path, "tmp/1234.56789.1234/donkey.jpg")
+    assert_equal "donkey.jpg", e.image.filename
+    assert_equal "tmp/1234.56789.1234", e.image.dir
+    assert_equal "donkey-large.jpg", e.image.large.filename
+    assert_equal "tmp/1234.56789.1234", e.image.large.dir
+    assert_equal "donkey-thumb.jpg", e.image.thumb.filename
+    assert_equal "tmp/1234.56789.1234", e.image.thumb.dir
   end
   
   def test_exists
@@ -619,7 +624,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.image.exists?
     assert e.save
     assert e.image.exists?
-    e.image.delete
+    e.image.send(:delete)
     assert !e.image.exists?
   end
   
@@ -709,7 +714,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.save
     assert File.exists?( e.image.path )
     assert File.exists?( e.image.thumb.path )
-    e.image.delete
+    e.image.send(:delete)
     assert !File.exists?( e.image.path )
     assert !File.exists?( e.image.thumb.path )
     assert_nil e.image.dir
@@ -723,7 +728,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.save
     assert File.exists?( e.image.path )
     assert File.exists?( e.image.thumb.path )
-    e.image.delete
+    e.image.send(:delete)
     assert !File.exists?( e.image.path )
     assert !File.exists?( e.image.thumb.path )
     assert e.image.dir

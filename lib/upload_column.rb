@@ -100,7 +100,9 @@ module UploadColumn
   class UploadedFile
 
     attr_accessor :options, :dir
-    attr_reader :instance, :attribute, :versions, :suffix
+    attr_reader :instance, :attribute, :versions, :suffix, :options
+
+    private :dir=
 
     def initialize(options, instance, attribute, dir = nil, filename = nil, suffix = nil)
       options = DEFAULT_OPTIONS.merge(options)
@@ -144,104 +146,6 @@ module UploadColumn
     
     def exists?
       File.exists?(self.path)
-    end
-
-    def set_path(temp_path) #:nodoc:
-      return if temp_path == self.relative_path # We do not need to set this path
-      raise ArgumentError.new("invalid format of '#{temp_path}'") unless temp_path =~ %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}
-      self.dir = $1
-      self.filename = $3
-      versions.each { |k, v| v.filename = $3; v.dir = $1 } if versions
-    end
-
-    # Assigns a file to this upload column and stores it in a temporary file,
-    # Bypasses the _after_assign callback
-    # use +UploadedFile::save+ to store the file to its permanent location! 
-    def assign(file, directory = nil )
-      unless file.nil?
-        if file.size == 0
-          return false
-        else
-          if file.is_a?(String)
-            # if file is a non-empty string it is most probably
-            # the filename and the user forgot to set the encoding
-            # to multipart/form-data. Since we would raise an exception
-            # because of the missing "original_filename" method anyways,
-            # we raise a more meaningful exception rightaway.
-            raise TypeError.new("Do not know how to handle a string with value '#{file}' that was passed to an upload_column. Check if the form's encoding has been set to 'multipart/form-data'.")
-          end
-      
-          if file.original_filename != ""
-      
-            self.dir = directory || join_path( options[:tmp_dir], generate_temp_name )            
-      
-            FileUtils.mkpath(self.store_dir)
-            
-            self.filename = file.original_filename
-
-            # stored uploaded file into self.path
-            # If it was a Tempfile object, the temporary file will be
-            # cleaned up automatically, so we do not have to care for this
-            # Large files will be passed as tempfiles, whereas small ones
-            # will be passed as StringIO
-            if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
-              fix_file_extension( file, file.local_path )
-              return false unless check_integrity( self.filename_extension )
-              FileUtils.copy_file( file.local_path, self.path )
-            elsif file.respond_to?(:read)
-              fix_file_extension( file, nil )
-              return false unless check_integrity( self.filename_extension )
-              file.rewind # Make sure we are at the beginning of the buffer
-              File.open(self.path, "wb") { |f| f.write(file.read) }
-            else
-              raise ArgumentError.new("Do not know how to handle #{file.inspect}")
-            end
-                  
-            versions.each { |k, v| v.assign(file, dir) } if versions
-            
-            return true
-          end
-        end
-      end
-    end
-
-    # Save the file to the permanent location
-    def save
-      new_dir = if options[:store_dir_append_id] then self.instance.id.to_s else nil end
-      new_abs_dir = join_path( self.store_dir(true), new_dir )
-      new_path = join_path( new_abs_dir, filename )
-  
-      # Check if a new file has actually been assigned
-      if self.filename and self.filename != "" and new_path != self.path
-   
-        # create the directory first
-        FileUtils.mkpath(new_abs_dir) unless File.exists?(new_abs_dir)
-
-        # move the temporary file over
-        FileUtils.cp( self.path, new_path )
-
-        # remove the old file, do this after in case copying fails.      
-        #self.delete if options[:replace_old_files]
-  
-        self.dir = new_dir
-    
-        versions.each { |k, v| v.save } if versions
-      end
-    end
-
-    def delete_temporary_files #:nodoc:
-      FileUtils.rm_rf( Dir.glob(join_path(store_dir(true), options[:tmp_dir], "*") ) )
-    end
-
-    # Delete this file, note that it will only delete the FILE, not the value in the
-    # database
-    def delete
-      if self.dir and self.store_dir
-        FileUtils.rm_rf( self.store_dir )
-      else
-        FileUtils.rm( self.path ) if File.exists?( self.path )
-        versions.each { |k, v| v.delete } if versions
-      end
     end
 
     # Processes the file with RMagick. This works only if the file is an image that
@@ -378,12 +282,107 @@ module UploadColumn
       end
     end
 
+    private
+    
     # Set the filename, use at your own risk!
     def filename=(name)
       @filename = sanitize_filename( name )
     end
+    
+    # Assigns a file to this upload column and stores it in a temporary file,
+    def assign(file, directory = nil )
+      unless file.nil?
+        if file.size == 0
+          return false
+        else
+          if file.is_a?(String)
+            # if file is a non-empty string it is most probably
+            # the filename and the user forgot to set the encoding
+            # to multipart/form-data. Since we would raise an exception
+            # because of the missing "original_filename" method anyways,
+            # we raise a more meaningful exception rightaway.
+            raise TypeError.new("Do not know how to handle a string with value '#{file}' that was passed to an upload_column. Check if the form's encoding has been set to 'multipart/form-data'.")
+          end
+      
+          if file.original_filename != ""
+      
+            self.dir = directory || join_path( options[:tmp_dir], generate_temp_name )            
+      
+            FileUtils.mkpath(self.store_dir)
+            
+            self.filename = file.original_filename
 
-    private
+            # stored uploaded file into self.path
+            # If it was a Tempfile object, the temporary file will be
+            # cleaned up automatically, so we do not have to care for this
+            # Large files will be passed as tempfiles, whereas small ones
+            # will be passed as StringIO
+            if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
+              fix_file_extension( file, file.local_path )
+              return false unless check_integrity( self.filename_extension )
+              FileUtils.copy_file( file.local_path, self.path )
+            elsif file.respond_to?(:read)
+              fix_file_extension( file, nil )
+              return false unless check_integrity( self.filename_extension )
+              file.rewind # Make sure we are at the beginning of the buffer
+              File.open(self.path, "wb") { |f| f.write(file.read) }
+            else
+              raise ArgumentError.new("Do not know how to handle #{file.inspect}")
+            end
+                  
+            versions.each { |k, v| v.send(:assign, file, dir) } if versions
+            
+            return true
+          end
+        end
+      end
+    end
+    
+    def save
+      new_dir = if options[:store_dir_append_id] then self.instance.id.to_s else nil end
+      new_abs_dir = join_path( self.store_dir(true), new_dir )
+      new_path = join_path( new_abs_dir, filename )
+  
+      # Check if a new file has actually been assigned
+      if self.filename and self.filename != "" and new_path != self.path
+   
+        # create the directory first
+        FileUtils.mkpath(new_abs_dir) unless File.exists?(new_abs_dir)
+
+        # move the temporary file over
+        FileUtils.cp( self.path, new_path )
+
+        # remove the old file, do this after in case copying fails.      
+        #self.delete if options[:replace_old_files]
+  
+        self.dir = new_dir
+    
+        versions.each { |k, v| v.send(:save) } if versions
+      end
+    end
+    
+    def delete_temporary_files #:nodoc:
+      FileUtils.rm_rf( Dir.glob(join_path(store_dir(true), options[:tmp_dir], "*") ) )
+    end
+
+    # Delete this file, note that it will only delete the FILE, not the value in the
+    # database
+    def delete
+      if self.dir and self.store_dir
+        FileUtils.rm_rf( self.store_dir )
+      else
+        FileUtils.rm( self.path ) if File.exists?( self.path )
+        versions.each { |k, v| v.send(:delete) } if versions
+      end
+    end
+    
+    def set_path(temp_path) #:nodoc:
+      return if temp_path == self.relative_path # We do not need to set this path
+      raise ArgumentError.new("invalid format of '#{temp_path}'") unless temp_path =~ %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}
+      self.dir = $1
+      self.filename = $3
+      versions.each { |k, v| v.send(:filename=, $3); v.send(:dir=, $1) } if versions
+    end
     
     def check_integrity( extension )
       if self.options[:validate_integrity]
@@ -477,26 +476,6 @@ module UploadColumn
   #
   # See +image_column+ and the +README+ for more info
   class UploadedImage < UploadedFile
-    def assign(file, directory = nil ) #:nodoc:
-      # Call superclass method and check for success (not if this actually IS a version!)
-      if super(file, directory) and suffix.nil? and options[:versions].is_a?( Hash )
-        
-        options[:versions].each do |name, size|
-          # Check if size is a string, and if so resize the respective version
-          if size.is_a?( String )
-            if options[:crop]
-              return false unless self.versions[name].crop_resized!( size )
-            else
-              return false unless self.versions[name].resize!( size )
-            end
-          else
-            raise TypeError.new( "#{size.inspect} is not a valid option, must be of format '123x123'")
-          end
-        end
-        
-      end
-      true
-    end
     
     # Resize the image so that it will not exceed the dimensions passed
     # via geometry, geometry should be a string, formatted like '200x100' where
@@ -517,6 +496,29 @@ module UploadColumn
         h, w = geometry.split('x')
         img.crop_resized(h.to_i,w.to_i)
       end
+    end
+    
+    private
+    
+    def assign(file, directory = nil )
+      # Call superclass method and check for success (not if this actually IS a version!)
+      if super(file, directory) and suffix.nil? and options[:versions].is_a?( Hash )
+        
+        options[:versions].each do |name, size|
+          # Check if size is a string, and if so resize the respective version
+          if size.is_a?( String )
+            if options[:crop]
+              return false unless self.versions[name].crop_resized!( size )
+            else
+              return false unless self.versions[name].resize!( size )
+            end
+          else
+            raise TypeError.new( "#{size.inspect} is not a valid option, must be of format '123x123'")
+          end
+        end
+        
+      end
+      true
     end
   end
 
@@ -605,12 +607,12 @@ module UploadColumn
           old_file = uploaded_file.dup if uploaded_file
           uploaded_file ||= column_class.new(options, self, attr)
           # We simply write over the temp version if it exists
-          if file and not file.blank? and uploaded_file.assign(file)
+          if file and not file.blank? and uploaded_file.send(:assign, file)
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
             if old_file and [ :replace, :delete ].include?(options[:old_files])
-              old_file.delete
+              old_file.send(:delete)
             end
           else
             # Reset if something's gone wrong
@@ -631,7 +633,7 @@ module UploadColumn
           # The actual upload should always have preference over the temp upload
           unless uploaded_file
             uploaded_file = column_class.new(options, self, attr)
-            uploaded_file.set_path(temp_path)
+            uploaded_file.send(:set_path, temp_path)
             instance_variable_set upload_column_attr, uploaded_file
             self[attr] = uploaded_file.to_s
           end
@@ -651,8 +653,8 @@ module UploadColumn
       define_method after_save_method do
         uploaded_file = send(upload_column_method)
         if uploaded_file
-          uploaded_file.save
-          uploaded_file.delete_temporary_files
+          uploaded_file.send(:save)
+          uploaded_file.send(:delete_temporary_files)
         end
       end
   
@@ -663,7 +665,7 @@ module UploadColumn
   
       define_method after_destroy_method do
         uploaded_file = send(upload_column_method)
-        uploaded_file.delete if uploaded_file and not [ :keep, :replace ].include?(options[:old_files])
+        uploaded_file.send(:delete) if uploaded_file and not [ :keep, :replace ].include?(options[:old_files])
       end
       after_destroy after_destroy_method
   
