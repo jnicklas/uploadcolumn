@@ -554,7 +554,7 @@ module UploadColumn
             if self.mime_type == "image/jpeg"
               require_gem 'exifr'
               i = EXIFR::JPEG.new(self.path)
-              self.instance.send("#{self.attribute}_exif_#{$1}=".to_sym, i.exif[$1.to_sym])
+              self.instance.send("#{self.attribute}_exif_#{$1}=".to_sym, i.exif[$1.to_sym]) if i and i.exif
             end
           end
         end
