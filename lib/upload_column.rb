@@ -76,7 +76,8 @@ module UploadColumn
     :tmp_dir => proc{|inst, attr| File.join(Inflector.underscore(inst.class).to_s, attr.to_s, "tmp") },
     :old_files => :delete,
     :validate_integrity => true,
-    :file_exec => 'file'
+    :file_exec => 'file',
+    :filename => proc{|inst, original, ext| original + ( ext.blank? ? '' : ".#{ext}" )}
   }.freeze
 
   # = Basics
@@ -262,12 +263,12 @@ module UploadColumn
 
     # Returns the filename without the extension
     def filename_base
-      split_extension[0]
+      split_extension(@filename)[0]
     end
 
     # Returns the file's extension
     def filename_extension
-      split_extension[1]
+      split_extension(@filename)[1]
     end
 
     # Guesses the mime-type of the file based on its extension, returns a String.
@@ -313,7 +314,8 @@ module UploadColumn
         directory = join_path( self.relative_tmp_dir, generate_temp_name )
       end
       
-      self.filename = file.original_filename
+      basename, ext = split_extension(file.original_filename)
+      self.filename = fetch_filename( self.instance, basename, ext )
       self.relative_dir = directory
       
       FileUtils.mkpath(self.dir)
@@ -324,11 +326,11 @@ module UploadColumn
       # Large files will be passed as tempfiles, whereas small ones
       # will be passed as StringIO
       if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
-        mime_type = fix_file_extension( file, file.local_path )
+        mime_type = fix_file_extension( file, file.local_path, basename )
         return false unless check_integrity( self.filename_extension )
         FileUtils.copy_file( file.local_path, self.path )
       elsif file.respond_to?(:read)
-        mime_type = fix_file_extension( file, nil )
+        mime_type = fix_file_extension( file, nil, basename )
         return false unless check_integrity( self.filename_extension )
         file.rewind # Make sure we are at the beginning of the buffer
         File.open(self.path, "wb") { |f| f.write(file.read) }
@@ -359,6 +361,16 @@ module UploadColumn
     
         versions.each { |k, v| v.send(:save) } if versions
       end
+    end
+    
+    def fetch_filename(inst, original, ext)
+      fn = self.instance.send("#{self.attribute}_filename", original, ext)
+      if options[:filename].is_a?( Proc )
+        fn ||= options[:filename].call(inst, original, ext)
+      else
+        fn ||= options[:filename]
+      end
+      fn
     end
     
     def set_magic_columns
@@ -417,19 +429,19 @@ module UploadColumn
     end
 
     # Split the filename into base and extension
-    def split_extension()
+    def split_extension(fn)
       # regular expressions to try for identifying extensions
       ext_regexps = [ 
         /^(.+)\.([^.]+\.[^.]+)$/, # matches "something.tar.gz"
         /^(.+)\.([^.]+)$/ # matches "something.jpg"
       ]
       ext_regexps.each do |regexp|
-        if @filename =~ regexp
+        if fn =~ regexp
           base, ext = $1, $2
           return [base, ext] if options[:extensions].include?(ext.downcase)
         end
       end
-      [@filename, ""]
+      [fn, ""]
     end
 
     def sanitize_filename(name)
@@ -443,7 +455,7 @@ module UploadColumn
 
     # tries to identify the mime-type of file and correct self's extension
     # based on the found mime-type
-    def fix_file_extension( file, local_path )
+    def fix_file_extension( file, local_path, basename )
       # try to fetch the filename via the 'file' Unix exec
       content_type = get_content_type( local_path )
       # Fetch the content type that was passed from the users browser
@@ -452,7 +464,7 @@ module UploadColumn
       # Is this one of our known content types?
       if content_type and options[:fix_file_extensions] and options[:mime_extensions][content_type]
         # If so, correct the extension
-        self.filename = self.filename_base + "." + options[:mime_extensions][content_type]
+        self.filename = fetch_filename(self.instance, basename, options[:mime_extensions][content_type])
       end
       
       content_type
@@ -720,6 +732,9 @@ module UploadColumn
       end
 
       # Callbacks the user can use to hook into uploadcolumn
+      define_method "#{attr}_filename" do |original, ext|
+      end
+      
       define_method "#{attr}_store_dir" do
       end
       

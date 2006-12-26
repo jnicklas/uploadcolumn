@@ -81,6 +81,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal :delete, e.image.options[:old_files]
     assert_equal true, e.image.options[:validate_integrity]
     assert_equal 'file', e.image.options[:file_exec]
+    assert_equal "duck.png", e.image.options[:filename].call(e,'duck','png')
   end
   
   def test_assign_without_save_with_tempfile
@@ -256,7 +257,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", "tmp")), e.image.tmp_dir
     
     assert_match %r{^#{File.join('entry', 'image', 'tmp', '(\d+\.)+\d+')}$}, e.image.relative_dir
-    assert_match %r{^#{File.expand_path(File.join('public', 'entry', 'image', 'tmp', '(\d+\.)+\d+'))}$}, e.image.dir
+    assert_match %r{^#{File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '(\d+\.)+\d+'))}$}, e.image.dir
     
     e.save
     
@@ -754,6 +755,40 @@ class UploadColumnTest < Test::Unit::TestCase
     assert !File.exists?( e.image.path )
     assert !File.exists?( e.image.thumb.path )
     assert !File.exists?( e.image.dir )
+  end
+  
+  def test_filename
+    Entry.upload_column( :image, :filename => "donkey.jpg")
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert_equal("donkey.jpg", e.image.filename)
+    assert e.save
+    assert_equal("donkey.jpg", e.image.filename)
+    assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, 'donkey.jpg')), e.image.path)
+    assert File.exists?(e.image.path)
+  end
+  
+  def test_filename_with_proc
+    Movie.upload_column( :movie, :filename => proc{|inst, original, ext| "donkey_#{inst.name.downcase.gsub(/[^a-z]/, '_')}_#{original}_duck.#{ext}"} )
+    e = Movie.new
+    e.name = "The Demented Cartoon Movie"
+    e.movie = uploaded_file("kerb.jpg", "image/jpeg")
+    assert_equal("donkey_the_demented_cartoon_movie_kerb_duck.jpg", e.movie.filename)
+    assert e.save
+    assert_equal("donkey_the_demented_cartoon_movie_kerb_duck.jpg", e.movie.filename)
+    assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'movie', 'movie', e.id.to_s, 'donkey_the_demented_cartoon_movie_kerb_duck.jpg')), e.movie.path)
+    assert File.exists?(e.movie.path)
+  end
+  
+  def test_filename_with_proc_and_id
+    Entry.upload_column( :image, :filename => proc{|inst, original, ext| "donkey_#{inst.id || 'new'}.#{ext}"} )
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert_equal("donkey_new.jpg", e.image.filename)
+    assert e.save
+    assert_equal("donkey_1.jpg", e.image.filename)
+    assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, 'donkey_1.jpg')), e.image.path)
+    assert File.exists?(e.image.path)
   end
   
 end
