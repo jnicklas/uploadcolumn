@@ -70,15 +70,15 @@ class UploadColumnTest < Test::Unit::TestCase
   
   def test_default_options
     e = upload_entry
+    e.id = 10
     assert_equal File.join(RAILS_ROOT, "public"), e.image.options[:root_path]
     assert_equal "", e.image.options[:web_root]
     assert_equal UploadColumn::MIME_EXTENSIONS, e.image.options[:mime_extensions]
     assert_equal UploadColumn::EXTENSIONS, e.image.options[:extensions]
     assert_equal true, e.image.options[:fix_file_extensions]
-    assert_equal nil, e.image.options[:store_dir]
-    assert_equal true, e.image.options[:store_dir_append_id]
-    assert_equal "tmp", e.image.options[:tmp_dir]
-    assert_equal :accumulate, e.image.options[:old_files]
+    assert_equal File.join('entry', 'b', '10'), e.image.options[:store_dir].call(e,'b')
+    assert_equal File.join('entry', 'b', 'tmp'), e.image.options[:tmp_dir].call(e,'b')
+    assert_equal :delete, e.image.options[:old_files]
     assert_equal true, e.image.options[:validate_integrity]
     assert_equal 'file', e.image.options[:file_exec]
   end
@@ -107,7 +107,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.image.respond_to?(:path), "{e.image.inspect} did not respond to 'path'"
     assert File.exists?(e.image.path)
     assert_identical e.image.path, file_path(basename)
-    assert_match %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}, e.image.relative_path
+    assert_match %r{^((\d+\.)+\d+)/([^/].+)$}, e.image_temp
   end
   
   def test_filename_preserved
@@ -124,6 +124,13 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.image.respond_to?(:path), "{e.image.inspect} did not respond to 'path'"
     assert File.exists?(e.image.path)
     assert_identical e.image.path, file_path("kerb.jpg")
+  end
+  
+  def test_with_string
+    e = Entry.new
+    assert_raise(TypeError) do
+      e.image = "duck"
+    end
   end
   
   def test_extension_added
@@ -224,7 +231,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert File.exists?(e.image.path)
     assert FileUtils.identical?(e.image.path, file_path("kerb.jpg"))
     assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, "kerb.jpg")), e.image.path
-    assert_equal "#{e.id}/kerb.jpg", e.image.relative_path
+    assert_equal "entry/image/#{e.id}/kerb.jpg", e.image.relative_path
     assert !File.exists?(tmp_file_path), "temporary file '#{tmp_file_path}' not removed"
     assert !File.exists?(File.dirname(tmp_file_path)), "temporary directory '#{File.dirname(tmp_file_path)}' not removed"
     
@@ -237,13 +244,34 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_identical e.image.path, file_path("kerb.jpg")
   end
   
+  # Tests store_dir, relative_store_dir, tmp_dir, relative_tmp_dir, dir and relative_dir
   def test_dir_methods
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    
+    assert_equal File.join("entry", "image", e.id.to_s), e.image.relative_store_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", e.id.to_s)), e.image.store_dir
+    
+    assert_equal File.join("entry", "image", "tmp"), e.image.relative_tmp_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", "tmp")), e.image.tmp_dir
+    
+    assert_match %r{^#{File.join('entry', 'image', 'tmp', '(\d+\.)+\d+')}$}, e.image.relative_dir
+    assert_match %r{^#{File.expand_path(File.join('public', 'entry', 'image', 'tmp', '(\d+\.)+\d+'))}$}, e.image.dir
+    
     e.save
     
+    assert_equal File.join("entry", "image", e.id.to_s), e.image.relative_store_dir
     assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", e.id.to_s)), e.image.store_dir
+    
+    assert_equal File.join("entry", "image", "tmp"), e.image.relative_tmp_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", "tmp")), e.image.tmp_dir
+    
     assert_equal File.join("entry", "image", e.id.to_s), e.image.relative_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", e.id.to_s)), e.image.dir
+  end
+  
+  def test_path_emthods
+    
   end
   
   def test_assign_with_save_and_multiple_versions
@@ -260,13 +288,13 @@ class UploadColumnTest < Test::Unit::TestCase
     assert File.exists?(e.image.thumb.path)
     assert_identical e.image.thumb.path, file_path("kerb.jpg")
     assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, "kerb-thumb.jpg")), e.image.thumb.path
-    assert_equal "#{e.id}/kerb-thumb.jpg", e.image.thumb.relative_path
+    assert_equal "entry/image/#{e.id}/kerb-thumb.jpg", e.image.thumb.relative_path
 
     assert e.image.large.is_a?(UploadColumn::UploadedFile), "#{e.image.inspect} is not an UploadedFile"
     assert File.exists?(e.image.large.path)
     assert_identical e.image.large.path, file_path("kerb.jpg")
     assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, "kerb-large.jpg")), e.image.large.path
-    assert_equal "#{e.id}/kerb-large.jpg", e.image.large.relative_path
+    assert_equal "entry/image/#{e.id}/kerb-large.jpg", e.image.large.relative_path
 
     assert !File.exists?(File.dirname(tmp_file_path)), "temporary directory '#{File.dirname(tmp_file_path)}' not removed"
     
@@ -305,7 +333,7 @@ class UploadColumnTest < Test::Unit::TestCase
     e.validation_should_fail = true
     assert !e.save, "e should not save due to validation errors"
     
-    assert_match %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}, e.image.relative_path
+    assert_match %r{^((\d+\.)+\d+)/([^/].+)$}, e.image_temp
     assert File.exists?(local_path = e.image.path)
         
     image_temp = e.image_temp
@@ -317,7 +345,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.image.is_a?(UploadColumn::UploadedFile), "#{e.image.inspect} is not an UploadedFile"
     assert File.exists?(e.image.path)
     assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, "kerb.jpg")), e.image.path
-    assert_equal "#{e.id}/kerb.jpg", e.image.relative_path
+    assert_equal "entry/image/#{e.id}/kerb.jpg", e.image.relative_path
     assert_identical e.image.path, file_path("kerb.jpg")
   end
   
@@ -436,7 +464,7 @@ class UploadColumnTest < Test::Unit::TestCase
     e = Entry.new("image" => uploaded_file("kerb.jpg", "image/jpeg", 'c:\images\kerb.jpg'))
 
     assert_equal "kerb.jpg", e.image.filename
-    assert e.image.relative_path =~ /^tmp\/[\d\.]+\/kerb\.jpg$/, "relative path '#{e.image.relative_path}' was not as expected"
+    assert e.image.relative_path =~ /^entry\/image\/tmp\/[\d\.]+\/kerb\.jpg$/, "relative path '#{e.image.relative_path}' was not as expected"
     assert File.exists?(e.image.path)
   end
   
@@ -517,21 +545,21 @@ class UploadColumnTest < Test::Unit::TestCase
   end
 
 
-  def test_serializable_before_save
-    e = Entry.new
-    e.image = uploaded_file("skanthak.png", "image/png")
-    assert_nothing_raised { 
-      flash = Marshal.dump(e) 
-      e = Marshal.load(flash)
-    }
-    assert_equal e.image.filename, "skanthak.png"
-    assert File.exists?(e.image.path)
-  end
+#  def test_serializable_before_save
+#    e = Entry.new
+#    e.image = uploaded_file("skanthak.png", "image/png")
+#    assert_nothing_raised { 
+#      flash = Marshal.dump(e) 
+#      e = Marshal.load(flash)
+#    }
+#    assert_equal e.image.filename, "skanthak.png"
+#    assert File.exists?(e.image.path)
+#  end
   
   def test_url
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal "/entry/image/#{e.image.dir.gsub('\\', '/')}/skanthak.png", e.image.url
+    assert_equal "/#{e.image.relative_dir.gsub('\\', '/')}/skanthak.png", e.image.url
     assert e.save
     assert_equal "/entry/image/#{e.id.to_s}/skanthak.png", e.image.url
   end
@@ -540,25 +568,54 @@ class UploadColumnTest < Test::Unit::TestCase
     Entry.upload_column( :image, :store_dir => "donkey")
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', e.image.dir.gsub('\\', '/'), "skanthak.png")), e.image.path
+    # Note that the temp path should NOT (since ver 0.2) be affected by a change in :store_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', e.image.relative_dir.gsub('\\', '/'), "skanthak.png")), e.image.path
     assert e.save
-    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', e.id.to_s, "skanthak.png")), e.image.path
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', "skanthak.png")), e.image.path
   end
   
-  def test_store_dir_append_id
-    Entry.upload_column( :image, :store_dir_append_id => false )
+  def test_store_dir_with_proc
+    Movie.upload_column( :movie, :store_dir => proc{|inst, attr| File.join(attr.to_s, inst.name.downcase.gsub(/[^A-Za-z_]/, '_'))})
+    e = Movie.new
+    e.name = "The Demented Cartoon Movie"
+    e.movie = uploaded_file("skanthak.png", "image/png")
+    # Note that the temp path should NOT (since ver 0.2) be affected by a change in :store_dir
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', e.movie.relative_dir.gsub('\\', '/'), "skanthak.png")), e.movie.path
+    assert e.save
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'movie', 'the_demented_cartoon_movie', "skanthak.png")), e.movie.path
+  end
+  
+  def test_tmp_dir
+    Entry.upload_column( :image, :tmp_dir => "old/tmp" )
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.image.dir.gsub('\\', '/'), "skanthak.png")), e.image.path
+    assert_match %r{^old/tmp}, e.image.relative_dir
+  end
+  
+  def test_tmp_dir_with_proc
+    Movie.upload_column( :movie, :tmp_dir => proc{|inst, attr| File.join(attr.to_s, inst.name.downcase.gsub(/[^A-Za-z_]/, '_'), 'tmp')})
+    e = Movie.new
+    e.name = "The Demented Cartoon Movie"
+    e.movie = uploaded_file("skanthak.png", "image/png")
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'movie', 'the_demented_cartoon_movie', 'tmp')), e.movie.tmp_dir
+    assert_equal File.join('movie', 'the_demented_cartoon_movie', 'tmp'), e.movie.relative_tmp_dir
+    assert_match %r{^movie/the_demented_cartoon_movie/tmp/}, e.movie.relative_path
     assert e.save
-    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', "skanthak.png")), e.image.path
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'movie', 'movie', e.id.to_s, "skanthak.png")), e.movie.path
+  end
+  
+  def test_slashed_tmp_dir
+    Entry.upload_column( :image, :tmp_dir => "/old/tmp" )
+    e = Entry.new
+    e.image = uploaded_file("skanthak.png", "image/png")
+    assert_match %r{^old/tmp}, e.image.relative_dir
   end
   
   def test_root_path
     Entry.upload_column( :image, :root_path => File.join( RAILS_ROOT, "public", "donkey") )
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', 'entry', 'image', e.image.dir.gsub('\\', '/'), "skanthak.png")), e.image.path
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', e.image.relative_dir.gsub('\\', '/'), "skanthak.png")), e.image.path
     assert e.save
     assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'donkey', 'entry', 'image', e.id.to_s, "skanthak.png")), e.image.path
   end
@@ -567,7 +624,7 @@ class UploadColumnTest < Test::Unit::TestCase
     Entry.upload_column( :image, :web_root => "donkey/test" )
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal "/donkey/test/entry/image/#{e.image.dir.gsub('\\', '/')}/skanthak.png", e.image.url
+    assert_equal "/donkey/test/#{e.image.relative_dir.gsub('\\', '/')}/skanthak.png", e.image.url
     assert e.save
     assert_equal "/donkey/test/entry/image/#{e.id.to_s}/skanthak.png", e.image.url
   end
@@ -576,25 +633,7 @@ class UploadColumnTest < Test::Unit::TestCase
     Entry.upload_column( :image, :web_root => "/donkey/test" )
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    assert_equal "/donkey/test/entry/image/#{e.image.dir.gsub('\\', '/')}/skanthak.png", e.image.url
-  end
-  
-  def test_replace_old_files
-    # TODO: make this work!
-  end
-  
-  def test_tmp_dir
-    Entry.upload_column( :image, :tmp_dir => "old/tmp" )
-    e = Entry.new
-    e.image = uploaded_file("skanthak.png", "image/png")
-    assert_match %r{^old/tmp}, e.image.dir
-  end
-  
-  def test_slashed_tmp_dir
-    Entry.upload_column( :image, :tmp_dir => "/old/tmp" )
-    e = Entry.new
-    e.image = uploaded_file("skanthak.png", "image/png")
-    assert_match %r{^old/tmp}, e.image.dir
+    assert_equal "/donkey/test/#{e.image.relative_dir.gsub('\\', '/')}/skanthak.png", e.image.url
   end
   
   def test_size
@@ -609,13 +648,25 @@ class UploadColumnTest < Test::Unit::TestCase
     Entry.upload_column(:image, :versions => [:thumb, :large])
     e = Entry.new
     e.image = uploaded_file("skanthak.png", "image/png")
-    e.image.send(:set_path, "tmp/1234.56789.1234/donkey.jpg")
+    e.image.send(:set_path, "1234.56789.1234/donkey.jpg")
     assert_equal "donkey.jpg", e.image.filename
-    assert_equal "tmp/1234.56789.1234", e.image.dir
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.dir
     assert_equal "donkey-large.jpg", e.image.large.filename
-    assert_equal "tmp/1234.56789.1234", e.image.large.dir
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.large.dir
     assert_equal "donkey-thumb.jpg", e.image.thumb.filename
-    assert_equal "tmp/1234.56789.1234", e.image.thumb.dir
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.thumb.dir
+    assert_raise(ArgumentError) do
+      e.image.send(:set_path, "somefolder/1234.56789.1234/donkey.jpg")
+    end
+    assert_raise(ArgumentError) do
+      e.image.send(:set_path, "../1234.56789.1234/donkey.jpg")
+    end
+    assert_raise(ArgumentError) do
+      e.image.send(:set_path, "/usr/bin/ruby") # 'Cos that would be bad :P
+    end
+    assert_raise(ArgumentError) do
+      e.image.send(:set_path, "1234.56789.1234")
+    end
   end
   
   def test_exists
@@ -638,22 +689,6 @@ class UploadColumnTest < Test::Unit::TestCase
     e.image = uploaded_file("skanthak.png", "image/png")
     assert e.save
     assert_equal e.image.mime_type, "image/png"
-  end
-  
-  def test_old_files_accumulate
-    e = Entry.new
-    e.image = uploaded_file("kerb.jpg", "image/jpeg")
-    assert e.save
-    assert File.exists?( e.image.path )
-    old_path = e.image.path
-    e.image = uploaded_file("skanthak.png", "image/png")
-    assert e.save
-    assert File.exists?( e.image.path )
-    somewhat_newer_path = e.image.path
-    assert File.exists?( old_path )
-    assert e.destroy
-    assert !File.exists?( somewhat_newer_path )
-    assert !File.exists?( old_path )
   end
   
   def test_old_files_replace
@@ -707,32 +742,18 @@ class UploadColumnTest < Test::Unit::TestCase
     assert File.exists?( old_path ) 
   end
   
-  def test_delete_single_files
-    Entry.upload_column( :image, :store_dir_append_id => false, :versions => [ :thumb, :large ] )
-    e = Entry.new
-    e.image = uploaded_file("kerb.jpg", "image/jpeg")
-    assert e.save
-    assert File.exists?( e.image.path )
-    assert File.exists?( e.image.thumb.path )
-    e.image.send(:delete)
-    assert !File.exists?( e.image.path )
-    assert !File.exists?( e.image.thumb.path )
-    assert_nil e.image.dir
-    assert File.exists?( e.image.store_dir )
-  end
-  
-  def test_delete_whole_directory
+  def test_delete
     Entry.upload_column( :image, :versions => [ :thumb, :large ] )
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")
     assert e.save
+    assert_equal e.image.store_dir, e.image.dir #Check that we saved to the right location
     assert File.exists?( e.image.path )
     assert File.exists?( e.image.thumb.path )
     e.image.send(:delete)
     assert !File.exists?( e.image.path )
     assert !File.exists?( e.image.thumb.path )
-    assert e.image.dir
-    assert !File.exists?( e.image.store_dir )
+    assert !File.exists?( e.image.dir )
   end
   
 end

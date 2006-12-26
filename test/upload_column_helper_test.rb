@@ -52,9 +52,9 @@ class UploadColumnHelperTest < Test::Unit::TestCase
     assert_not_nil upload_column_field('entry', 'image')
     assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="#{@entry.image.relative_path}" />)
     @entry = Entry.find(2)
-    @entry.image_temp = "tmp/1234.56789.1234/kerb.jpg"
+    @entry.image_temp = "1234.56789.1234/kerb.jpg"
     assert_not_nil upload_column_field('entry', 'image')
-    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="tmp/1234.56789.1234/kerb.jpg" />)    
+    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="1234.56789.1234/kerb.jpg" />)    
   end
   
 end

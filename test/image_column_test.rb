@@ -101,7 +101,6 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
     assert file.is_a?(UploadColumn::UploadedFile), "#{file.inspect} is not an UploadedFile"
     assert file.respond_to?(:path), "{file.inspect} did not respond to 'path'"
     assert File.exists?(file.path)
-    assert_match %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}, file.relative_path
   end
 
   def test_resize_without_save
@@ -155,6 +154,20 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
     GC.start
   end
 
+  def test_manipulate_with_proc
+    Entry.image_column :image, :versions => { :thumb => "100x100", :solarized => proc{|img| img.solarize} }
+    e = Entry.new
+    e.image = uploaded_file(Image2, Mime2)
+    
+    thumb = read_image(e.image.thumb.path)
+    assert_max_image_size thumb, 100, 100
+    
+    assert_not_identical e.image.solarized.path, e.image.path
+    
+    thumb = nil
+    GC.start
+  end
+
   def test_invalid_image
     e = Entry.new
     assert_nothing_raised do
@@ -195,7 +208,6 @@ class ImageColumnCropTest < Test::Unit::TestCase
     assert file.is_a?(UploadColumn::UploadedFile), "#{file.inspect} is not an UploadedFile"
     assert file.respond_to?(:path), "{file.inspect} did not respond to 'path'"
     assert File.exists?(file.path)
-    assert_match %r{^([^/]+/(\d+\.)+\d+)/([^/].+)$}, file.relative_path
   end
 
   def test_resize_without_save
@@ -242,6 +254,23 @@ class ImageColumnCropTest < Test::Unit::TestCase
     thumb = read_image(e.image.thumb.path)
     flat = read_image(e.image.flat.path)
     assert_image_size thumb, 100, 100
+    assert_image_size flat, 200, 100
+    flat = nil
+    thumb = nil
+    GC.start
+  end
+  
+  def test_crop_selected_images_only
+    Entry.image_column :image, :versions => { :thumb => "100x100", :flat => "c200x100" }
+    e = Entry.new
+    e.image = uploaded_file(Image2, Mime2)
+    
+    thumb = read_image(e.image.thumb.path)
+    flat = read_image(e.image.flat.path)
+    assert_max_image_size thumb, 100, 100
+    # Thumb is not cropped
+    assert_not_equal(100, thumb.columns)
+    # Flat IS cropped
     assert_image_size flat, 200, 100
     flat = nil
     thumb = nil

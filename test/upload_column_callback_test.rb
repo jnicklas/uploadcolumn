@@ -2,6 +2,9 @@ require File.join(File.dirname(__FILE__), 'abstract_unit')
 
 #:nodoc:
 
+Entry = Class.new( ActiveRecord::Base )
+Movie = Class.new( ActiveRecord::Base )
+
 class Entry < ActiveRecord::Base
   attr_accessor :validation_should_fail, :iaac
   
@@ -11,7 +14,7 @@ class Entry < ActiveRecord::Base
     errors.add("image","some stupid error") if @validation_should_fail
   end
   
-  def store_dir
+  def image_store_dir
     "entries"
   end
   
@@ -28,9 +31,9 @@ class Movie < ActiveRecord::Base
   
   upload_column :movie
   
-  def store_dir
+  def movie_store_dir
     # Beware in this test case you'll HAVE to pass a name... otherwise stupid errors...
-    File.join("files", self.name)
+    File.join("files", name)
   end
 end
 
@@ -57,15 +60,15 @@ class UploadColumnTest < Test::Unit::TestCase
   def test_store_dir
     e = upload_entry
     assert e.save
-    #assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entries', e.id.to_s, "kerb.jpg")), e.image.path
+    assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'entries', e.id.to_s, "skanthak.png")), e.image.path
   end
   
   def test_complex_store_dir
     e = Movie.new
-    e.movie = uploaded_file("skanthak.png", "image/png")
     e.name = "aroo"
+    e.movie = uploaded_file("skanthak.png", "image/png")
     assert e.save
-    #assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'files', 'aroo', e.id.to_s, "kerb.jpg")), e.movie.path    
+    #assert_equal File.expand_path(File.join(RAILS_ROOT, 'public', 'files', 'aroo', e.id.to_s, "skanthak.png")), e.movie.path
   end
   
   def test_after_assign

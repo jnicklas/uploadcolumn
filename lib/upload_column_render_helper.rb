@@ -19,17 +19,19 @@ module UploadColumnRenderHelper
   # since most Rmagick methods do not modify the image itself but rather return the result of the
   # transformation.
   #
-  # Instead of passing an upload_column object to +render_image+ you can even pass a path,
+  # Instead of passing an upload_column object to +render_image+ you can even pass a path String,
   # if you do you will have to pass a mime-type as well though.
   def render_image( file, mime_type = nil )
       mime_type ||= file.mime_type
       path = if file.is_a?( String ) then file else file.path end
-      @headers["Content-Type"] = mime_type
+      headers["Content-Type"] = mime_type
       
-      img = ::Magick::Image::read(path).first
-      
-      img = yield( img ) if block_given?
-      
-      render :text => img.to_blob, :layout => false
+      if block_given?
+        img = ::Magick::Image::read(path).first
+        img = yield( img )      
+        render :text => img.to_blob, :layout => false
+      else  
+        send_file( path )
+      end
   end
 end

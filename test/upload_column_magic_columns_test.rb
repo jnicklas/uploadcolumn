@@ -90,6 +90,22 @@ class UploadColumnMagicColumnTest < Test::Unit::TestCase
     assert_equal 87582, e['image_filesize']
   end
   
+  def test_magic_columns_from_tmp
+    SizeMigration.up
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    f = Entry.new
+    f.image_temp = e.image_temp
+    assert_equal 87582, f.image.size
+    assert_equal 87582, f.image_filesize
+    assert_equal 87582, f['image_filesize']
+    assert f.save
+    assert_equal 87582, f.image.size
+    assert_equal 87582, f.image_filesize
+    assert_equal 87582, f['image_filesize']
+    
+  end
+  
   def test_width
     WidthMigration.up
     Entry.image_column :image

@@ -1,4 +1,4 @@
-1.1.2
+1.1.2 (unreleased)
 
 * new :validates_integrity option replaces the old validates_integrity_of. The latter was more elegant, but posed a security risk, since files would be stored on the server in a remotely accessible location without having been validated. I tried to fix the bug, but couldn't make it work, so I opted for the less elegant, but safe solution instead.
 
@@ -7,3 +7,39 @@
 * assign, save, delete_temporary_files, delete, filename= and dir= are now all private, I see no reason why they should be public, and since they aren't really useful out of context I think it makes for a cleaner API to make them private, if you still need to use them, you can use .send(:save), etc.. instead.
 
 * Added magic columns, see the readme for detaills.
+
+0.2
+
+* A freaking huge refactoring of the code, basically ALL of the methods for accessing paths have changed, except for path itself. This was overdue and I apologize if it breaks anything, but I felt that the gain in consistency was worth it. It now works like this:
+
+    path                --the current path of the file (including the filename)
+    relative_path       --the current path of the file relative to the root_path option
+    
+    dir                 --the directory where the file is currently stored
+    relative_dir        --like dir but relative to root_path
+    
+    store_dir           --The directory where files are permanently stored
+    relative_store_dir  --the same but relative to root_dir
+    
+    tmp_dir             --The directory where tempfiles are stored
+    relative_tmp_dir    --you can work this out yourself
+    
+As you can see, this is now actually consistent, with all the relative paths relative to the same directory (err... wow?) and a consistent naming convention.
+
+* In related news: you can now pass a Proc to the :store_dir and :tmp_dir options. The default options are now also procs, instead of being some kind of arcane super-exception like before. The procs will be passed to arguments, first the current model instance and the name of the upload column as the second.
+
+* The :accumulate option was removed from :old_files. I really liked it, but it doesn't make sense with th new Proc-based system (it would wipe out data without thinking, thus potentially getting rid of files you want to keep). Use :keep instead or implement some kind of versioning. The new default is :delete. So beware, if you need to keep those files, make sure to change it!
+
+* You can now specify individual versions that should be cropped in image_columns, simply add a 'c' before the string that specifies the size, so you can do:
+
+    image_column :picture, :versions => { :thumb => "100x100", :banner => "c400x200" }
+    
+Where thumb will be no larger than 100x100 (but might be smaller) and banner will be cropped to 400x200 exactly!
+
+* Furthermore you can pass a Proc instead of a string to an image_column version:
+
+    image_column :picture, :versions => { :thumb => "100x100", :solarized => proc{|img| img.solarize} }
+
+The Proc will be passed an RMagick object, just like process!
+
+* render_image now uses send_file if no block is given for faster performance.

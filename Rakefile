@@ -20,3 +20,14 @@ Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
+
+desc 'Generate documentation for the UploadColumn plugin using the allison template.'
+Rake::RDocTask.new(:rdoc_allison) do |rdoc|
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title    = 'UploadColumn'
+  rdoc.options << '--line-numbers' << '--inline-source'
+  rdoc.rdoc_files.include('README')
+  rdoc.rdoc_files.include('lib/**/*.rb')
+  rdoc.main = "README" # page to start on
+  rdoc.template = "~/sites/allison/allison.rb"
+end
