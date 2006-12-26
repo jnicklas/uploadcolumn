@@ -137,10 +137,12 @@ module UploadColumn
       filename
     end
     
+    # Returns the file's size
     def size
       File.size(self.path)
     end
     
+    # checks whether the file exists
     def exists?
       File.exists?(self.path)
     end
@@ -205,19 +207,17 @@ module UploadColumn
       true
     end
     
+    # Returns the (absolute) directory where the file is currently stored.
     def dir
       File.expand_path(self.relative_dir, options[:root_path])
     end
 
-    # Returns the absolute path of the file
+    # Returns the (absolute) path of the file
     def path
       File.expand_path(self.relative_path, options[:root_path])
     end
 
-    # Returns the path of the file, relative to store_dir( true )
-    # Note: this is not relative to the same directory as relative_dir, I am aware
-    # that that makes no sense whatsoever, but until I come up with a better name for one
-    # of the methods it'll have to do, suggestions are appreciated :)
+    # Returns the path of the file relative to :root_path
     def relative_path()
       join_path(self.relative_dir, self.filename)
     end
@@ -247,10 +247,12 @@ module UploadColumn
       return sd
     end
     
+    # Returns the directory where the file will be temporarily stored between form redisplays
     def tmp_dir
       File.expand_path(self.relative_tmp_dir, options[:root_path])
     end
     
+    # Like +tmp_dir+ but will return the directory relative to the :root_path option
     def relative_tmp_dir
       sd = self.instance.send("#{self.attribute}_tmp_dir")
       if options[:tmp_dir].is_a?( Proc )
@@ -271,7 +273,7 @@ module UploadColumn
       split_extension(@filename)[1]
     end
 
-    # Guesses the mime-type of the file based on its extension, returns a String.
+    # Returns the mime-type of the file.
     def mime_type
       return @mime_type if @mime_type
       case filename_extension
@@ -608,17 +610,16 @@ module UploadColumn
     #
     # +upload_column+ accepts the following common options:
     # [+versions+] Creates different versions of the file, must be an Array, +image_column+ allows a Hash of dimensions to be passed.
-    # [+store_dir+] Overwrite the default mechanism for deciding where the files are stored
-    # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:accumulate</tt>, <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. If it's set to :accumulate, which is the default option, then all new files will be kept, but the files will be deleted when the associated object is destroyed.
+    # [+store_dir+] Determines where the file will be stored permanently, you can pass a String or a Proc that takes the current instance and the attribute name as parameters, see the +README+ for detaills.
+    # [+tmp_dir+] Determines where the file will be stored temporarily before it is stored to its final location, you can pass a String or a Proc that takes the current instance and the attribute name as parameters, see the +README+ for detaills.
+    # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. Default to :delete.
     # 
     # and even the following less common ones
-    # [+root_path+] The root path where image will be stored, it will be prepended to store_dir
+    # [+root_path+] The root path where image will be stored, it will be prepended to store_dir and tmp_dir
     # [+web_root+] Prepended to all addresses returned by UploadColumn::BaseUploadedFile.url
     # [+mime_extensions+] Overwrite UploadColumns default list of mime-type to extension mappings
     # [+extensions+] Overwirte UploadColumns default list of extensions that may be uploaded
     # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, note that this does not give you any security, to make sure that no dangerous files are uploaded, set :validate_integrity to true (it is by default). Defaults to true
-    # [+store_dir_append_id+] Append a directory labeled with the records ID to the path where the file is stored, defaults to true
-    # [+tmp_base_dir+] The base directory where the image temp files are stored, defaults to "tmp"
     # [+validate_integrity] If set to true, no files with an extension not included in :extensions will be uploaded, defaults to true.
     # [+file_exec+] Path to an executable used to find out a files mime_type, works only on *nix based systems. Defaults to 'file'
     def upload_column(attr, options={})
@@ -645,6 +646,11 @@ module UploadColumn
     # 
     # Use this to prevent upload of files which could potentially damage your system,
     # such as executables or script files (.rb, .php, etc...).
+    #
+    # WARNING: validates_integrity_of does NOT work with :validates_integrity => true (which is the default)!
+    # EVEN STRONGER WARNING: If you use validates_integrity_of, potentially harmful files may be uploaded to your
+    # tmp dir, make sure that these are not in your public directory, otherwise a hacker might seriously damage
+    # your system (by uploading .rb files or similar)
     def validates_integrity_of(*attr_names)
       configuration = { :message => "is not of a valid file type." }
       configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)

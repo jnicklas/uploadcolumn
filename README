@@ -40,17 +40,26 @@ You won't always want to store the pictures in the directory that upload_column 
 
     upload_column :picture, :store_dir => "images/user_pictures"
     
-might be sensible in our case. By default upload_column will create a directory labeled after the associated object's id and save the image to that directory. So if our user has id 5, then the image would actually be saved to
-    images/user_pictures/5
-This can easily be turned off by specifying
-    upload_column :picture, :store_dir => "images/user_pictures", :store_dir_append_id => false
+might be sensible in our case. Note that this way, all files will be stored in the same directory.
+
 If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a callback method. In our case the method would be called +picture_store_dir+. Just append +_store_dir+ to your upload_column field.
     def picture_store_dir
-      "images/#{self.category.name}"
+      "images/#{self.category.name}/#{self.id}"
     end
-You can even specifify a different directory for storing the temporary files if you should need to, just pass a <tt>:tmp_dir</tt> key to upload_column. There usually should't be a need for this.
 
-== Manipulating image with RMagick
+A shorter way to do something like this is to pass a Proc to :store_dir, like so:
+
+    upload_column :picture, :store_dir => proc{|inst, attr| "images/#{inst.category.name}/#{inst.id}"}
+
+The proc will be passed two parameters, the first is the current instance of your model class, the second is the name of the attribute that is being uploaded to (in our case attr would be :picture).
+
+You can change the :tmp_dir in the same way. For reference: the default for :store_dir is the following proc:
+
+    proc{|inst, attr| File.join(Inflector.underscore(inst.class).to_s, attr.to_s, inst.id.to_s) }
+    
+Note how it uses File.join, if you plan to use your code on Windows systems you should use File.join, since Windows uses backslashes instead of forwardslashes. File.join takes care of that automatically.
+
+== Manipulating Images with RMagick
 
 Say you would want (for whatever reason) to have a funky solarize effect on your users' images. Manipulating images with upload_column can be done either at runtime or after the image is saved, let's look at some possibilities:
 
