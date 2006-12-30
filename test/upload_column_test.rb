@@ -117,6 +117,8 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal "skanthak.png", e.image.filename
     assert_equal "skanthak", e.image.filename_base
     assert_equal "png", e.image.filename_extension
+    assert_equal "skanthak", e.image.original_basename
+    assert_equal "png", e.image.ext
   end
   
   def test_filename_stored_in_attribute
@@ -645,28 +647,47 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal e.image.size, 12629
   end
   
-  def test_set_path
+  def test_assign_temp
+    #different basename
     Entry.upload_column(:image, :versions => [:thumb, :large])
     e = Entry.new
-    e.image = uploaded_file("skanthak.png", "image/png")
-    e.image.send(:set_path, "1234.56789.1234/donkey.jpg")
+    e.image_temp = "1234.56789.1234/donkey.jpg;llama.png"
+    assert_equal "llama", e.image.original_basename
+    assert_equal "png", e.image.ext
     assert_equal "donkey.jpg", e.image.filename
     assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.dir
     assert_equal "donkey-large.jpg", e.image.large.filename
     assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.large.dir
     assert_equal "donkey-thumb.jpg", e.image.thumb.filename
     assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), e.image.thumb.dir
+    
+    #same basename
+    f = Entry.new
+    f.image_temp = "1234.56789.1234/donkey.jpg" # old style
+    assert_equal "donkey", f.image.original_basename
+    assert_equal "jpg", f.image.ext
+    assert_equal "donkey.jpg", f.image.filename
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), f.image.dir
+    assert_equal "donkey-large.jpg", f.image.large.filename
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), f.image.large.dir
+    assert_equal "donkey-thumb.jpg", f.image.thumb.filename
+    assert_equal File.expand_path(File.join( RAILS_ROOT, 'public', 'entry', 'image', 'tmp', '1234.56789.1234')), f.image.thumb.dir
+    
+    e = Entry.new
     assert_raise(ArgumentError) do
-      e.image.send(:set_path, "somefolder/1234.56789.1234/donkey.jpg")
+      e.image_temp = "somefolder/1234.56789.1234/donkey.jpg;llama.png"
     end
+    e = Entry.new
     assert_raise(ArgumentError) do
-      e.image.send(:set_path, "../1234.56789.1234/donkey.jpg")
+      e.image_temp = "../1234.56789.1234/donkey.jpg;llama.png"
     end
+    e = Entry.new
     assert_raise(ArgumentError) do
-      e.image.send(:set_path, "/usr/bin/ruby") # 'Cos that would be bad :P
+      e.image_temp = "/usr/bin/ruby" # 'Cos that would be bad :P
     end
+    e = Entry.new
     assert_raise(ArgumentError) do
-      e.image.send(:set_path, "1234.56789.1234")
+      e.image_temp = "1234.56789.1234;llama.png"
     end
   end
   
@@ -762,6 +783,7 @@ class UploadColumnTest < Test::Unit::TestCase
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")
     assert_equal("donkey.jpg", e.image.filename)
+    assert_equal "kerb", e.image.original_basename
     assert e.save
     assert_equal("donkey.jpg", e.image.filename)
     assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, 'donkey.jpg')), e.image.path)
@@ -774,6 +796,7 @@ class UploadColumnTest < Test::Unit::TestCase
     e.name = "The Demented Cartoon Movie"
     e.movie = uploaded_file("kerb.jpg", "image/jpeg")
     assert_equal("donkey_the_demented_cartoon_movie_kerb_duck.jpg", e.movie.filename)
+    assert_equal "kerb", e.movie.original_basename
     assert e.save
     assert_equal("donkey_the_demented_cartoon_movie_kerb_duck.jpg", e.movie.filename)
     assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'movie', 'movie', e.id.to_s, 'donkey_the_demented_cartoon_movie_kerb_duck.jpg')), e.movie.path)
@@ -781,14 +804,49 @@ class UploadColumnTest < Test::Unit::TestCase
   end
   
   def test_filename_with_proc_and_id
-    Entry.upload_column( :image, :filename => proc{|inst, original, ext| "donkey_#{inst.id || 'new'}.#{ext}"} )
+    Entry.upload_column( :image, :versions => [:thumb, :large], :filename => proc{|inst, original, ext| "donkey_#{inst.id || 'new'}.#{ext}"} )
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")
     assert_equal("donkey_new.jpg", e.image.filename)
+    assert_equal("donkey_new-thumb.jpg", e.image.thumb.filename)
+    assert_equal("donkey_new-large.jpg", e.image.large.filename)
+    assert_equal "kerb", e.image.original_basename
     assert e.save
     assert_equal("donkey_1.jpg", e.image.filename)
+    assert_equal("donkey_1-thumb.jpg", e.image.thumb.filename)
+    assert_equal("donkey_1-large.jpg", e.image.large.filename)
     assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', e.id.to_s, 'donkey_1.jpg')), e.image.path)
     assert File.exists?(e.image.path)
+    assert File.exists?(e.image.thumb.path)
+    assert File.exists?(e.image.large.path)
+    
+    # test from tmp...
+    f = Entry.new
+    f.image = uploaded_file("kerb.jpg", "image/jpeg")
+    g = Entry.new
+    g.image_temp = f.image_temp
+    assert_equal("donkey_new.jpg", g.image.filename)
+    assert_equal("donkey_new-thumb.jpg", g.image.thumb.filename)
+    assert_equal("donkey_new-large.jpg", g.image.large.filename)
+    assert_equal "kerb", g.image.original_basename
+    assert g.save
+    assert_equal("donkey_#{g.id.to_s}.jpg", g.image.filename)
+    assert_equal("donkey_#{g.id.to_s}-thumb.jpg", g.image.thumb.filename)
+    assert_equal("donkey_#{g.id.to_s}-large.jpg", g.image.large.filename)
+    assert_equal(File.expand_path(File.join(RAILS_ROOT, 'public', 'entry', 'image', g.id.to_s, "donkey_#{g.id.to_s}.jpg")), g.image.path)
+    assert File.exists?(g.image.path)
+    assert File.exists?(g.image.thumb.path)
+    assert File.exists?(g.image.large.path)
+    
+    # refetch entry
+    
+    h = Entry.find(1)
+    assert_equal("donkey_1.jpg", h.image.filename)
+    assert_equal("donkey_1-thumb.jpg", h.image.thumb.filename)
+    assert_equal("donkey_1-large.jpg", h.image.large.filename)
+    assert File.exists?(h.image.path)
+    assert File.exists?(h.image.thumb.path)
+    assert File.exists?(h.image.large.path)
   end
   
 end

@@ -28,9 +28,9 @@ Now just open up your _form.rhtml partial, and edit it so it looks like the foll
     
 Here we're making a call to UploadColumnHelper.upload_column_field, this will create an input field of the file type.
 
-We'll need to set the form to multipart, so that the picture will actually be sent as well. In new.rhtml change the +start_form_tag+ declaration to something like:
+We'll need to set the form to multipart, so that the picture will actually be sent as well. You can use the upload_form_tag helper:
 
-    <%= start_form_tag( { :action => 'create' }, { :multipart => true } ) %>
+    <%= upload_form_tag( :action => 'create' ) %>
 
 And that's it! Your uploads are up and running (hopefully) and you should now be able to add pictures to your users. The madness doesn't stop there of course!
 

@@ -50,11 +50,11 @@ class UploadColumnHelperTest < Test::Unit::TestCase
     assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="" />)
     @entry = Entry.find(2)
     assert_not_nil upload_column_field('entry', 'image')
-    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="#{@entry.image.relative_path}" />)
+    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="#{@entry.image_temp}" />)
     @entry = Entry.find(2)
-    @entry.image_temp = "1234.56789.1234/kerb.jpg"
+    @entry.image_temp = "1234.56789.1234/kerb.jpg;donkey.png"
     assert_not_nil upload_column_field('entry', 'image')
-    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="1234.56789.1234/kerb.jpg" />)    
+    assert_equal upload_column_field('entry', 'image'), %(<input id="entry_image" name="entry[image]" size="30" type="file" /><input id="entry_image_temp" name="entry[image_temp]" type="hidden" value="1234.56789.1234/kerb.jpg;donkey.png" />)    
   end
   
 end

@@ -99,10 +99,10 @@ module UploadColumn
   #     @user.picture.thumb.url
   class UploadedFile
 
-    attr_accessor :options, :mime_type
+    attr_accessor :options, :mime_type, :ext, :original_basename
     attr_reader :instance, :attribute, :versions, :suffix, :options, :relative_dir
 
-    private :mime_type=
+    private :mime_type=, :ext=, :original_basename=
 
     def initialize(options, instance, attribute, dir = nil, filename = nil, suffix = nil)
       options = DEFAULT_OPTIONS.merge(options)
@@ -290,11 +290,7 @@ module UploadColumn
 
     # returns the file's name
     def filename
-      if suffix.nil?
-        @filename
-      else
-        "#{filename_base}-#{suffix}.#{filename_extension}"
-      end
+      expand_filename(@filename)
     end
 
     private
@@ -316,7 +312,7 @@ module UploadColumn
         directory = join_path( self.relative_tmp_dir, generate_temp_name )
       end
       
-      basename, ext = split_extension(file.original_filename)
+      basename, self.ext = split_extension(file.original_filename)
       self.filename = fetch_filename( self.instance, basename, ext )
       self.relative_dir = directory
       
@@ -328,39 +324,45 @@ module UploadColumn
       # Large files will be passed as tempfiles, whereas small ones
       # will be passed as StringIO
       if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
-        mime_type = fix_file_extension( file, file.local_path, basename )
+        self.ext, self.mime_type = fetch_file_extension( file, file.local_path, self.ext )
+        self.filename = fetch_filename( self.instance, basename, self.ext )
         return false unless check_integrity( self.filename_extension )
         FileUtils.copy_file( file.local_path, self.path )
       elsif file.respond_to?(:read)
-        mime_type = fix_file_extension( file, nil, basename )
+        self.ext, self.mime_type = fetch_file_extension( file, nil, self.ext )
+        self.filename = fetch_filename( self.instance, basename, self.ext )
         return false unless check_integrity( self.filename_extension )
         file.rewind # Make sure we are at the beginning of the buffer
         File.open(self.path, "wb") { |f| f.write(file.read) }
       else
         raise ArgumentError.new("Do not know how to handle #{file.inspect}")
       end
-            
+      
+      self.original_basename = basename
+ 
       versions.each { |k, v| v.send(:assign, file, directory) } if versions
       
       return true
     end
     
     def save
-      
-      new_dir = self.store_dir
-      new_path = join_path( new_dir, self.filename )
-      
-      # Check if the filename is blank
-      if self.filename and not self.filename.blank? and new_path != self.path
+
+      # Check if the filename is blank, is this a tmp file?
+      if self.filename and not self.filename.blank? and self.dir != self.store_dir 
+        
+        new_dir = self.store_dir
+        new_filename = fetch_filename(self.instance, self.original_basename, self.ext)
+        new_path = join_path( new_dir, expand_filename(new_filename) )
         
         # create the directory first
         FileUtils.mkpath(new_dir) #unless File.exists?(new_di)
 
         # move the temporary file over
         FileUtils.cp( self.path, new_path )
-  
+
         self.relative_dir = self.relative_store_dir
-    
+        self.filename = new_filename
+  
         versions.each { |k, v| v.send(:save) } if versions
       end
     end
@@ -402,12 +404,20 @@ module UploadColumn
       end
     end
     
-    def set_path(temp_path) #:nodoc:
+    def set_path(temp_path)
       return if temp_path == self.relative_path # We do not need to set this path
-      raise ArgumentError.new("invalid format of '#{temp_path}'") unless temp_path =~ %r{^((\d+\.)+\d+)/([^/].+)$}
+      raise ArgumentError.new("invalid format of '#{temp_path}'") unless temp_path =~ %r{^((\d+\.)+\d+)/([^/;]+)(;([^/;]+))?$}
       self.relative_dir = join_path( self.relative_tmp_dir, $1 )
+      self.original_basename, self.ext = split_extension($5 || $3)
       self.filename = $3
-      versions.each { |k, v| v.send(:filename=, self.filename); v.send(:relative_dir=, self.relative_dir) } if versions
+      if versions
+        versions.each do |k, v|
+          v.send(:filename=, self.filename)
+          v.send(:relative_dir=, self.relative_dir)
+          v.send(:original_basename=, self.original_basename)
+          v.send(:ext=, self.ext)
+        end
+      end
     end
     
     def check_integrity( extension )
@@ -454,10 +464,19 @@ module UploadColumn
       name = "unnamed" if name.size == 0
       name
     end
+    
+    def expand_filename(fn)
+      if suffix.nil?
+        fn
+      else
+        base, ext = split_extension(fn)
+        "#{base}-#{self.suffix}.#{ext}"
+      end
+    end
 
     # tries to identify the mime-type of file and correct self's extension
     # based on the found mime-type
-    def fix_file_extension( file, local_path, basename )
+    def fetch_file_extension( file, local_path, ext )
       # try to fetch the filename via the 'file' Unix exec
       content_type = get_content_type( local_path )
       # Fetch the content type that was passed from the users browser
@@ -466,10 +485,10 @@ module UploadColumn
       # Is this one of our known content types?
       if content_type and options[:fix_file_extensions] and options[:mime_extensions][content_type]
         # If so, correct the extension
-        self.filename = fetch_filename(self.instance, basename, options[:mime_extensions][content_type])
+        return options[:mime_extensions][content_type], content_type
+      else
+        return ext, content_type
       end
-      
-      content_type
     end
     
     # Try to use *nix exec to fetch content type
@@ -719,7 +738,8 @@ module UploadColumn
   
       define_method "#{attr}_temp" do
         uploaded_file = send(upload_column_method)
-        return uploaded_file.relative_path.sub( "#{uploaded_file.relative_tmp_dir}/", '' ) if uploaded_file
+        # Return the real path and the original(!) filename, we need that to fetch the filename later ;)
+        return uploaded_file.relative_path.sub( "#{uploaded_file.relative_tmp_dir}/", '' ) + ";#{uploaded_file.original_basename}.#{uploaded_file.ext}" if uploaded_file
         ""
       end
   
@@ -750,7 +770,7 @@ module UploadColumn
       define_method "#{attr}_after_assign" do
       end
 
-      # Hook UploadColumn into Rails via after_save and after_destroy
+      # Hook UploadColumn into Rails via before_save, after_save and after_destroy
       after_save_method = "#{attr}_after_save".to_sym
   
       define_method after_save_method do
@@ -758,10 +778,27 @@ module UploadColumn
         if uploaded_file
           uploaded_file.send(:save)
           uploaded_file.send(:delete_temporary_files)
+          connection.update(
+            "UPDATE #{self.class.table_name} " +
+            "SET #{quoted_comma_pair_list(connection, {attr => quote(uploaded_file.to_s)})} " +
+            "WHERE #{self.class.primary_key} = #{quote(self.id)}",
+            "#{self.class.name} Update"
+          )
         end
       end
   
       after_save after_save_method
+      
+#      before_save_method = "#{attr}_before_save".to_sym
+#  
+#      define_method before_save_method do
+#        uploaded_file = send(upload_column_method)
+#        if uploaded_file and uploaded_file.dir != uploaded_file.store_dir
+#          uploaded_file.send(:filename=, uploaded_file.send(:fetch_filename, self, uploaded_file.send(:original_basename), uploaded_file.send(:ext)))
+#        end
+#      end
+  
+#      before_save before_save_method
   
       # After destroy
       after_destroy_method = "#{attr}_after_destroy".to_sym
