@@ -667,9 +667,10 @@ module UploadColumn
     # such as executables or script files (.rb, .php, etc...).
     #
     # WARNING: validates_integrity_of does NOT work with :validates_integrity => true (which is the default)!
-    # EVEN STRONGER WARNING: If you use validates_integrity_of, potentially harmful files may be uploaded to your
+    # 
+    # EVEN STRONGER WARNING: Even if you use validates_integrity_of, potentially harmful files may still be uploaded to your
     # tmp dir, make sure that these are not in your public directory, otherwise a hacker might seriously damage
-    # your system (by uploading .rb files or similar)
+    # your system (by uploading .rb files or similar), if you want to avoid this problem, use :validate_integrity => true instead!
     def validates_integrity_of(*attr_names)
       configuration = { :message => "is not of a valid file type." }
       configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)

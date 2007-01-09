@@ -38,7 +38,7 @@ And that's it! Your uploads are up and running (hopefully) and you should now be
 
 You won't always want to store the pictures in the directory that upload_column selects for you, but that's not a problem, because changing that directory is trivial. You can pass a <tt>:store_dir</tt> key to the upload_column declaration, this will override the default mechanism and always use that directory as the basis.
 
-    upload_column :picture, :store_dir => "images/user_pictures"
+    upload_column :picture, :store_dir => "pictures"
     
 might be sensible in our case. Note that this way, all files will be stored in the same directory.
 
@@ -144,7 +144,7 @@ If your uploaded file is an image you would most likely want to display it in yo
 
 == Magic Columns
 
-UploadColumn allows you to add 'magic' columns to your model, which will be automatically filled with the appropriate data. Just add the column, for eample via migrations:
+UploadColumn allows you to add 'magic' columns to your model, which will be automatically filled with the appropriate data. Just add the column, for example via migrations:
 
     add_column :users, :picture_mime_type
 
