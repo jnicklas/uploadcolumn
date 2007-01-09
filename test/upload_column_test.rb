@@ -273,10 +273,6 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal File.expand_path(File.join(RAILS_ROOT, "public", "entry", "image", e.id.to_s)), e.image.dir
   end
   
-  def test_path_emthods
-    
-  end
-  
   def test_assign_with_save_and_multiple_versions
     Entry.upload_column :image, :versions => [ :thumb, :large ]
     e = Entry.new
@@ -875,6 +871,16 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal('kerb.jpg', e.image.filename)
     assert_equal(e.image.store_dir, e.image.dir)
     
+  end
+  
+  def test_illegal_filename
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "do nk?ey.jpg")
+    assert_equal  "do_nk_ey.jpg", e.image.filename
+    assert File.exists?(e.image.path)
+    assert e.save
+    assert_equal  "do_nk_ey.jpg", e.image.filename
+    assert File.exists?(e.image.path)
   end
   
 end

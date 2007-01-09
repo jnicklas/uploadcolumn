@@ -43,3 +43,9 @@ Where thumb will be no larger than 100x100 (but might be smaller) and banner wil
 The Proc will be passed an RMagick object, just like process!
 
 * render_image now uses send_file if no block is given for faster performance.
+
+* FIXED #6955 store_dir callback called when the file is assigned
+
+* FIXED #7697 Editing with old-files :delete / :replace erases the original file
+
+* FIXED #7686 Problem uploading files with spaces in name

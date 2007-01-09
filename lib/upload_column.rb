@@ -351,7 +351,7 @@ module UploadColumn
       if self.filename and not self.filename.blank? and self.dir != self.store_dir 
         
         new_dir = self.store_dir
-        new_filename = fetch_filename(self.instance, self.original_basename, self.ext)
+        new_filename = sanitize_filename(fetch_filename(self.instance, self.original_basename, self.ext))
         new_path = join_path( new_dir, expand_filename(new_filename) )
         
         # create the directory first
