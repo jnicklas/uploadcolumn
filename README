@@ -43,6 +43,7 @@ You won't always want to store the pictures in the directory that upload_column 
 might be sensible in our case. Note that this way, all files will be stored in the same directory.
 
 If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a callback method. In our case the method would be called +picture_store_dir+. Just append +_store_dir+ to your upload_column field.
+
     def picture_store_dir
       "images/#{self.category.name}/#{self.id}"
     end
@@ -58,6 +59,20 @@ You can change the :tmp_dir in the same way. For reference: the default for :sto
     proc{|inst, attr| File.join(Inflector.underscore(inst.class).to_s, attr.to_s, inst.id.to_s) }
     
 Note how it uses File.join, if you plan to use your code on Windows systems you should use File.join, since Windows uses backslashes instead of forwardslashes. File.join takes care of that automatically.
+
+== Filename
+
+By default, UploadColumn will keep the name of the original file, however this might be inconvenient in some cases. You can pass a :filename directive to your upload_column declaration:
+
+    upload_column :picture, :filename => "donkey.png"
+    
+In which case all files will be named <tt>donkey.png</tt>. This is not desirable if the file in question is a jpeg file of course. Usually it is more sensible to pass a Proc to :filename.
+
+    upload_column :picture, :filename => proc{|inst, orig, ext| "avatar#{inst.id}.#{ext}"}
+    
+The Proc will be passed three parameters, the current instance, the basename of the original file (without the extension) and the properly corrected extension.
+
+You can also use the +picture_filename+ callback, which must take two arguments, the original basename and the corrected extension.
 
 == Manipulating Images with RMagick
 

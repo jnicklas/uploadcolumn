@@ -431,6 +431,20 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal "arg", e.name
     assert_equal "kerb.jpg", e.movie.filename
     assert_identical file_path("kerb.jpg"), e.movie.path
+    assert File.exists?(e.movie.path)
+  end
+  
+  def test_edit_without_touching_file_and_old_versions_delete
+    Movie.upload_column :movie, :old_versions => :delete
+    e = Movie.new("movie" => uploaded_file("kerb.jpg", "image/jpeg"))
+    assert e.save
+    e = Movie.find(e.id)
+    e.name = "arg"
+    assert e.save
+    assert_equal "arg", e.name
+    assert_equal "kerb.jpg", e.movie.filename
+    assert_identical file_path("kerb.jpg"), e.movie.path
+    assert File.exists?(e.movie.path)
   end
   
   def test_save_without_image
@@ -847,6 +861,20 @@ class UploadColumnTest < Test::Unit::TestCase
     assert File.exists?(h.image.path)
     assert File.exists?(h.image.thumb.path)
     assert File.exists?(h.image.large.path)
+  end
+  
+  def test_assign_blank_stringio #bug in firefox sends blank stringios
+    e = Entry.new
+    e.image = uploaded_stringio(nil, 'application/octet-stream', 'llama.txt')
+    assert_nil e.image
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    e.image = uploaded_stringio(nil, 'application/octet-stream', 'llama.txt')
+    assert_equal('kerb.jpg', e.image.filename)
+    assert e.save
+    e.image = uploaded_stringio(nil, 'application/octet-stream', 'llama.txt')    
+    assert_equal('kerb.jpg', e.image.filename)
+    assert_equal(e.image.store_dir, e.image.dir)
+    
   end
   
 end

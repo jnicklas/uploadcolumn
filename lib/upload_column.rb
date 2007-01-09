@@ -721,7 +721,7 @@ module UploadColumn
             raise TypeError.new("Do not know how to handle a string with value '#{file}' that was passed to an upload_column. Check if the form's encoding has been set to 'multipart/form-data'.")
           end
                    
-          if file and not file.blank? and uploaded_file.send(:assign, file)
+          if file and not file.blank? and file.size != 0 and uploaded_file.send(:assign, file)
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
@@ -739,8 +739,13 @@ module UploadColumn
       define_method "#{attr}_temp" do
         uploaded_file = send(upload_column_method)
         # Return the real path and the original(!) filename, we need that to fetch the filename later ;)
-        return uploaded_file.relative_path.sub( "#{uploaded_file.relative_tmp_dir}/", '' ) + ";#{uploaded_file.original_basename}.#{uploaded_file.ext}" if uploaded_file
-        ""
+        if uploaded_file and uploaded_file.original_basename
+          return uploaded_file.relative_path.sub( "#{uploaded_file.relative_tmp_dir}/", '' ) + ";#{uploaded_file.original_basename}.#{uploaded_file.ext}"
+        elsif uploaded_file
+          return uploaded_file.relative_path.sub( "#{uploaded_file.relative_tmp_dir}/", '' )
+        else
+          return ""
+        end
       end
   
       define_method "#{attr}_temp=" do |temp_path|

@@ -1,5 +1,5 @@
 require File.dirname(__FILE__) + '/abstract_unit'
-require 'test_help'
+#require 'test_help'
 
 class Entry < ActiveRecord::Base
   upload_column :image

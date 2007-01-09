@@ -7,7 +7,7 @@ require_gem 'activerecord'
 require_gem 'actionpack'
 require 'stringio'
 require 'breakpoint'
-require 'test_help'
+#require 'test_help'
 
 #:nodoc:
 
