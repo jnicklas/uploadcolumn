@@ -8,6 +8,9 @@ require_gem 'actionpack'
 require 'stringio'
 require 'breakpoint'
 #require 'test_help'
+require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column'))
+require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column_helper'))
+require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column_render_helper'))
 
 #:nodoc:
 
@@ -23,18 +26,40 @@ $: << "../lib"
 ActiveRecord::Base.send(:include, UploadColumn)
 
 
-# we need to be able to change the original_filename, so that we can test
-# if the name were some crazy stuff....
-class ActionController::TestUploadedFile
-  attr_writer :original_filename
+#Mock Class for Uploads
+
+class TestUploadedFile
+  # The filename, *not* including the path, of the "uploaded" file
+  attr_accessor :original_filename
+  
+  # The content type of the "uploaded" file
+  attr_accessor :content_type
+  
+  def initialize(path, content_type = 'text/plain')
+    raise "#{path} file does not exist" unless File.exist?(path)
+    @content_type = content_type
+    @original_filename = path.sub(/^.*#{File::SEPARATOR}([^#{File::SEPARATOR}]+)$/) { $1 }
+    @tempfile = Tempfile.new(@original_filename)
+    FileUtils.copy_file(path, @tempfile.path)
+  end
+  
+  def path #:nodoc:
+    @tempfile.path
+  end
+  
+  alias local_path path
+  
+  def method_missing(method_name, *args, &block) #:nodoc:
+    @tempfile.send(method_name, *args, &block)
+  end
 end
 
 class Test::Unit::TestCase
   private
   
   def uploaded_file(basename, mime_type = nil, filename = nil)
-    ActionController::TestProcess # This is a hack, do not remove :P
-    file = ActionController::TestUploadedFile.new(
+    #ActionController::TestProcess # This is a hack, do not remove :P
+    file = TestUploadedFile.new(
       file_path( basename ), 
       mime_type.to_s
     )
@@ -63,7 +88,7 @@ class Test::Unit::TestCase
   end
   
   def assert_not_identical( actual, expected, message = nil )
-    message ||= "files #{actual} and #{expected} are not identical."
+    message ||= "files #{actual} and #{expected} are identical, expected to be not identical."
     assert !FileUtils.identical?(actual, expected), message
   end
   

@@ -2,9 +2,9 @@ require File.join(File.dirname(__FILE__), 'abstract_unit')
 
 #:nodoc:
 
-Image1 = "pict.png"
+Image1 = "kerb.jpg"
 Image2 = "skanthak.png"
-Mime1 = "image/png"
+Mime1 = "image/jpeg"
 Mime2 = "image/png"
 ImageInvalid = "invalid-image.jpg"
 MimeInvalid = "image/jpeg"
@@ -92,9 +92,9 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
     do_test_assign e.image
     do_test_assign e.image.thumb
     do_test_assign e.image.flat
-    assert_identical e.image.path, file_path("pict.png")
-    assert_not_identical e.image.thumb.path, file_path("pict.png")
-    assert_not_identical e.image.flat.path, file_path("pict.png")
+    assert_identical e.image.path, file_path(Image1)
+    assert_not_identical e.image.thumb.path, file_path(Image1)
+    assert_not_identical e.image.flat.path, file_path(Image1)
   end
   
   def do_test_assign( file )
@@ -176,6 +176,20 @@ class ImageColumnSimpleTest < Test::Unit::TestCase
     assert_nil e.image
     assert e.valid?
   end
+  
+  def test_force_format
+    Entry.image_column :image, :force_format => :png, :versions => { :thumb => "100x100", :flat => "200x100" }
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert_equal('png', e.image.filename_extension)
+    assert_equal("kerb.png", e.image.filename)
+    assert_equal("image/png", e.image.mime_type)
+    assert e.save
+    assert_equal('png', e.image.filename_extension)
+    assert_equal("kerb.png", e.image.filename)
+    assert_not_identical( file_path("kerb.jpg"), e.image.path ) 
+    assert_equal("image/png", e.image.mime_type)
+  end
 end
 
 class ImageColumnCropTest < Test::Unit::TestCase
@@ -199,9 +213,9 @@ class ImageColumnCropTest < Test::Unit::TestCase
     do_test_assign e.image
     do_test_assign e.image.thumb
     do_test_assign e.image.flat
-    assert_identical e.image.path, file_path("pict.png")
-    assert_not_identical e.image.thumb.path, file_path("pict.png")
-    assert_not_identical e.image.flat.path, file_path("pict.png")
+    assert_identical e.image.path, file_path(Image1)
+    assert_not_identical e.image.thumb.path, file_path(Image1)
+    assert_not_identical e.image.flat.path, file_path(Image1)
   end
   
   def do_test_assign( file )

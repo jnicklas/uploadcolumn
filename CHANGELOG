@@ -1,12 +1,10 @@
-1.1.2 (unreleased)
+0.2.1
 
-* new :validates_integrity option replaces the old validates_integrity_of. The latter was more elegant, but posed a security risk, since files would be stored on the server in a remotely accessible location without having been validated. I tried to fix the bug, but couldn't make it work, so I opted for the less elegant, but safe solution instead.
+* Added :force_format option to image_column
 
-* readded the :file_exec option, it's now possible to set this manually again. I cut it originally, because I felt that it was unneccessary and that there were too many options already, I readded it mainly to make it possible to test the validation better.
+* Various Rails 1.2.1 compatibility fixes (mainly in test)
 
-* assign, save, delete_temporary_files, delete, filename= and dir= are now all private, I see no reason why they should be public, and since they aren't really useful out of context I think it makes for a cleaner API to make them private, if you still need to use them, you can use .send(:save), etc.. instead.
-
-* Added magic columns, see the readme for detaills.
+============================
 
 0.2
 
@@ -49,3 +47,15 @@ The Proc will be passed an RMagick object, just like process!
 * FIXED #7697 Editing with old-files :delete / :replace erases the original file
 
 * FIXED #7686 Problem uploading files with spaces in name
+
+============================
+
+1.1.2 (unreleased)
+
+* new :validates_integrity option replaces the old validates_integrity_of. The latter was more elegant, but posed a security risk, since files would be stored on the server in a remotely accessible location without having been validated. I tried to fix the bug, but couldn't make it work, so I opted for the less elegant, but safe solution instead.
+
+* readded the :file_exec option, it's now possible to set this manually again. I cut it originally, because I felt that it was unneccessary and that there were too many options already, I readded it mainly to make it possible to test the validation better.
+
+* assign, save, delete_temporary_files, delete, filename= and dir= are now all private, I see no reason why they should be public, and since they aren't really useful out of context I think it makes for a cleaner API to make them private, if you still need to use them, you can use .send(:save), etc.. instead.
+
+* Added magic columns, see the readme for detaills.

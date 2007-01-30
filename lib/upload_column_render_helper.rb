@@ -20,17 +20,20 @@ module UploadColumnRenderHelper
   # transformation.
   #
   # Instead of passing an upload_column object to +render_image+ you can even pass a path String,
-  # if you do you will have to pass a mime-type as well though.
-  def render_image( file, mime_type = nil )
+  # if you do you will have to pass a :mime-type option as well though.
+  def render_image( file, options = {} )
+      format = if options.is_a?(Hash) then options[:force_format] else nil end
+      mime_type = if options.is_a?(String) then options else options[:mime_type] end
       mime_type ||= file.mime_type
       path = if file.is_a?( String ) then file else file.path end
-      headers["Content-Type"] = mime_type
+      headers["Content-Type"] = mime_type unless format
       
-      if block_given?
+      if block_given? or format
         img = ::Magick::Image::read(path).first
-        img = yield( img )      
+        img = yield( img ) if block_given?
+        img.format = format.to_s.upcase if format
         render :text => img.to_blob, :layout => false
-      else  
+      else
         send_file( path )
       end
   end

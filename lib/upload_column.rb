@@ -342,6 +342,8 @@ module UploadColumn
  
       versions.each { |k, v| v.send(:assign, file, directory) } if versions
       
+      set_magic_columns
+      
       return true
     end
     
@@ -546,6 +548,14 @@ module UploadColumn
     
     private
     
+    # Convert the image to format
+    def convert!(format)
+      process! do |img|
+        img.format = format.to_s.upcase
+        img
+      end
+    end
+    
     # I eat your memory for breakfast, don't use me!
     def width
       unless @width
@@ -594,30 +604,47 @@ module UploadColumn
     
     def assign(file, directory = nil )
       # Call superclass method and check for success (not if this actually IS a version!)
-      if super(file, directory) and suffix.nil? and options[:versions].is_a?( Hash )
+      if super(file, directory)
         
-        options[:versions].each do |name, size|
-          # Check if size is a string, and if so resize the respective version
-          if size.is_a?( String )
-            if options[:crop]
-              return false unless self.versions[name].crop_resized!( size )
-            elsif size[0,1] == "c"
-              return false unless self.versions[name].crop_resized!( size[1,30] )
+        if options[:force_format] and options[:extensions].include?(options[:force_format].to_s)
+          convert!(options[:force_format])
+          @mime_type = options[:mime_extensions][options[:force_format]]
+          self.instance.send("#{self.attribute}_mime_type=".to_sym, self.mime_type) if self.instance.class.column_names.include?("#{self.attribute}_mime_type")
+          self.versions.each { |k, v| v.send(:convert!, options[:force_format]) } if self.versions
+        end
+        if suffix.nil? and options[:versions].is_a?( Hash )
+        
+          options[:versions].each do |name, size|
+            # Check if size is a string, and if so resize the respective version
+            if size.is_a?( String )
+              if options[:crop]
+                return false unless self.versions[name].crop_resized!( size )
+              elsif size[0,1] == "c"
+                return false unless self.versions[name].crop_resized!( size[1,30] )
+              else
+                return false unless self.versions[name].resize!( size )
+              end
+            elsif size.is_a?( Proc )
+              self.versions[name].process! do |img|
+                img = size.call(img)
+              end
             else
-              return false unless self.versions[name].resize!( size )
+              raise TypeError.new( "#{size.inspect} is not a valid option, must be of format '123x123' or a Proc.")
             end
-          elsif size.is_a?( Proc )
-            self.versions[name].process! do |img|
-              img = size.call(img)
-            end
-          else
-            raise TypeError.new( "#{size.inspect} is not a valid option, must be of format '123x123' or a Proc.")
           end
         end
-        
+        return true
+      else
+        return false
       end
-      true
     end
+    
+    def fetch_file_extension( file, local_path, ext )
+      ext, content_type = super(file, local_path, ext)
+      ext = options[:force_format].to_s if options[:force_format] and options[:extensions].include?(options[:force_format].to_s)
+      return ext, content_type
+    end
+    
   end
 
   module ClassMethods
@@ -650,6 +677,7 @@ module UploadColumn
     # [+crop+] Specifies whether the image will be cropped to fit the dimensions passed
     # via versions, that way the image will always be exactly the specified size (otherwise
     # that size would be a maximum), however some areas of the image may be cut off. Default to false.
+    # [+force_format+] Allows you to specify an image format, all images will automatically be converter to that format. (Defaults to false)
     def image_column( attr, options={} )
       options[:crop] ||= false
       options[:web_root] ||= "/images"
@@ -726,7 +754,7 @@ module UploadColumn
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
-            uploaded_file.send(:set_magic_columns)
+            #uploaded_file.send(:set_magic_columns)
             if old_file and [ :replace, :delete ].include?(options[:old_files])
               old_file.send(:delete)
             end
@@ -786,8 +814,8 @@ module UploadColumn
           uploaded_file.send(:delete_temporary_files)
           connection.update(
             "UPDATE #{self.class.table_name} " +
-            "SET #{quoted_comma_pair_list(connection, {attr => quote(uploaded_file.to_s)})} " +
-            "WHERE #{self.class.primary_key} = #{quote(self.id)}",
+            "SET #{quoted_comma_pair_list(connection, {attr => quote_value(uploaded_file.to_s)})} " +
+            "WHERE #{self.class.primary_key} = #{quote_value(self.id)}",
             "#{self.class.name} Update"
           )
         end
