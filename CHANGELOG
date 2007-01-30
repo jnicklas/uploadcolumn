@@ -4,6 +4,8 @@
 
 * Various Rails 1.2.1 compatibility fixes (mainly in test)
 
+* FIXED #8109 Parallell uploads no longer wipe each other out
+
 ============================
 
 0.2

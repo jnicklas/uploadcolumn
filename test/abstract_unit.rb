@@ -7,6 +7,7 @@ require_gem 'activerecord'
 require_gem 'actionpack'
 require 'stringio'
 require 'breakpoint'
+require_gem 'mocha'
 #require 'test_help'
 require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column'))
 require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column_helper'))

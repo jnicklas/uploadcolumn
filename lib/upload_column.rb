@@ -348,25 +348,21 @@ module UploadColumn
     end
     
     def save
-
-      # Check if the filename is blank, is this a tmp file?
-      if self.filename and not self.filename.blank? and self.dir != self.store_dir 
         
-        new_dir = self.store_dir
-        new_filename = sanitize_filename(fetch_filename(self.instance, self.original_basename, self.ext))
-        new_path = join_path( new_dir, expand_filename(new_filename) )
-        
-        # create the directory first
-        FileUtils.mkpath(new_dir) #unless File.exists?(new_di)
+      new_dir = self.store_dir
+      new_filename = sanitize_filename(fetch_filename(self.instance, self.original_basename, self.ext))
+      new_path = join_path( new_dir, expand_filename(new_filename) )
+      
+      # create the directory first
+      FileUtils.mkpath(new_dir) #unless File.exists?(new_di)
 
-        # move the temporary file over
-        FileUtils.cp( self.path, new_path )
+      # move the temporary file over
+      FileUtils.cp( self.path, new_path )
 
-        self.relative_dir = self.relative_store_dir
-        self.filename = new_filename
-  
-        versions.each { |k, v| v.send(:save) } if versions
-      end
+      self.relative_dir = self.relative_store_dir
+      self.filename = new_filename
+
+      versions.each { |k, v| v.send(:save) } if versions
     end
     
     def fetch_filename(inst, original, ext)
@@ -393,7 +389,12 @@ module UploadColumn
     end
     
     def delete_temporary_files
-      FileUtils.rm_rf( Dir.glob(join_path(self.tmp_dir, "*") ) )
+      Dir.glob(join_path(self.tmp_dir, "*")).each do |file|
+        # Check if the file was created more than an hour ago
+        if file =~ %r{(\d+)\.[\d]+\.[\d]+$} and $1.to_i < ( Time.now - 3600 ).to_i
+          FileUtils.rm_rf(file)
+        end
+      end
     end
 
     # Delete this file, note that it will only delete the FILE, not the value in the
@@ -809,7 +810,9 @@ module UploadColumn
   
       define_method after_save_method do
         uploaded_file = send(upload_column_method)
-        if uploaded_file
+        # Check if the filename is blank, is this a tmp file?
+        if uploaded_file and uploaded_file.filename and not uploaded_file.filename.blank? and uploaded_file.dir != uploaded_file.store_dir
+          old_dir = uploaded_file.dir
           uploaded_file.send(:save)
           uploaded_file.send(:delete_temporary_files)
           connection.update(
@@ -818,6 +821,7 @@ module UploadColumn
             "WHERE #{self.class.primary_key} = #{quote_value(self.id)}",
             "#{self.class.name} Update"
           )
+          FileUtils.rm_rf(old_dir)
         end
       end
   

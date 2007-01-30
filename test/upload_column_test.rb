@@ -397,8 +397,6 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.save
     assert e.image.filename, "skanthak.png"
     assert_identical e.image.path, file_path("skanthak.png"), "'#{e.image}' is not the expected image 'skanthak.png'"
-    assert !File.exists?(temp_path), "temporary file '#{temp_path}' is not cleaned up"
-    assert !File.exists?(File.dirname(temp_path)), "temporary directory not cleaned up"
   end
   
   
@@ -881,6 +879,33 @@ class UploadColumnTest < Test::Unit::TestCase
     assert e.save
     assert_equal  "do_nk_ey.jpg", e.image.filename
     assert File.exists?(e.image.path)
+  end
+  
+  def test_old_tmp_file_handling
+    new_tmp = Time.now - 60
+    old_tmp = new_tmp - 3601
+    
+    # Do this first so it isn't mucked up by the mocking :)
+    f = Entry.new
+    f.image = uploaded_file("kerb.jpg", "image/jpeg", "do nk?ey.jpg")
+    
+    e = Entry.new
+    Time.expects(:now).at_least_once.returns(old_tmp)
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "do nk?ey.jpg")
+    assert e.image.dir =~ %r{(\d+)\.[\d]+\.[\d]+$}
+    assert_equal old_tmp.to_i, $1.to_i
+    Time.expects(:now).at_least_once.returns(new_tmp)
+    e.image = uploaded_file("kerb.jpg", "image/jpeg", "do nk?ey.jpg")
+    assert e.image.dir =~ %r{(\d+)\.[\d]+\.[\d]+$}
+    assert_equal new_tmp.to_i, $1.to_i
+    
+    assert f.save
+    
+    left = Dir.glob(File.join(f.image.tmp_dir, "*") ).map { |t| t =~ %r{(\d+)\.[\d]+\.[\d]+$}; $1.to_i }
+    
+    assert left.include?(new_tmp.to_i)
+    assert !left.include?(old_tmp.to_i)
+    
   end
   
 end
