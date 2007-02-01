@@ -665,6 +665,7 @@ module UploadColumn
     # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. Default to :delete.
     # 
     # and even the following less common ones
+    # [+permissions+] Specify the Unix permissions to be used with UploadColumn. Defaults to 0644.
     # [+root_path+] The root path where image will be stored, it will be prepended to store_dir and tmp_dir
     # [+web_root+] Prepended to all addresses returned by UploadColumn::BaseUploadedFile.url
     # [+mime_extensions+] Overwrite UploadColumns default list of mime-type to extension mappings

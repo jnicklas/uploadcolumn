@@ -4,6 +4,8 @@
 
 * Various Rails 1.2.1 compatibility fixes (mainly in test)
 
+* Added :permissions option to upload_column.
+
 * FIXED #8109 Parallell uploads no longer wipe each other out
 
 ============================
