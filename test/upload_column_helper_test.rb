@@ -38,7 +38,7 @@ class UploadColumnHelperTest < Test::Unit::TestCase
     assert_nil e.file
     e = Entry.find(2)
     assert e.image.is_a?( UploadColumn::UploadedFile )
-    assert e.file.is_a?( UploadColumn::UploadedFile )
+    assert e.textfile.is_a?( UploadColumn::UploadedFile )
   end
   
   def test_upload_column_field

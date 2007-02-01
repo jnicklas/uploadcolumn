@@ -77,7 +77,8 @@ module UploadColumn
     :old_files => :delete,
     :validate_integrity => true,
     :file_exec => 'file',
-    :filename => proc{|inst, original, ext| original + ( ext.blank? ? '' : ".#{ext}" )}
+    :filename => proc{|inst, original, ext| original + ( ext.blank? ? '' : ".#{ext}" )},
+    :permissions => 0644
   }.freeze
 
   # = Basics
@@ -341,6 +342,8 @@ module UploadColumn
       self.original_basename = basename
  
       versions.each { |k, v| v.send(:assign, file, directory) } if versions
+      
+      File.chmod(options[:permissions], self.path)
       
       set_magic_columns
       

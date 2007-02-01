@@ -21,7 +21,7 @@ class UploadColumnTest < Test::Unit::TestCase
     # we define the upload_columns here so that we can change
     # settings easily in a single tes
     Entry.upload_column :image
-    Entry.upload_column :file
+    Entry.upload_column :textfile
     Movie.upload_column :movie
   end
   
@@ -82,6 +82,7 @@ class UploadColumnTest < Test::Unit::TestCase
     assert_equal true, e.image.options[:validate_integrity]
     assert_equal 'file', e.image.options[:file_exec]
     assert_equal "duck.png", e.image.options[:filename].call(e,'duck','png')
+    assert_equal 0644, e.image.options[:permissions]
   end
   
   def test_assign_without_save_with_tempfile
@@ -501,8 +502,8 @@ class UploadColumnTest < Test::Unit::TestCase
   
   def test_empty_filename
     e = Entry.new
-    assert_nil e["file"]
-    assert_nil e.file
+    assert_nil e["textfile"]
+    assert_nil e.textfile
     assert_nil e["image"]
     assert_nil e.image
   end
@@ -510,14 +511,14 @@ class UploadColumnTest < Test::Unit::TestCase
   def test_with_two_upload_columns
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")
-    e.file = uploaded_file("skanthak.png", "image/png")
+    e.textfile = uploaded_file("skanthak.png", "image/png")
     assert e.save
     assert_match %{/entry/image/}, e.image.path
-    assert_match %{/entry/file/}, e.file.path
+    assert_match %{/entry/textfile/}, e.textfile.path
     assert_equal e.image.filename, "kerb.jpg"
-    assert_equal e.file.filename, "skanthak.png"
+    assert_equal e.textfile.filename, "skanthak.png"
     assert_identical e.image.path, file_path("kerb.jpg")
-    assert_identical e.file.path, file_path("skanthak.png")
+    assert_identical e.textfile.path, file_path("skanthak.png")
   end
   
   def test_with_two_models
@@ -906,6 +907,27 @@ class UploadColumnTest < Test::Unit::TestCase
     assert left.include?(new_tmp.to_i)
     assert !left.include?(old_tmp.to_i)
     
+  end
+  
+  def test_default_permissions
+    e = Entry.new
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert File.exists?(e.image.path)
+    assert_equal( 0644, (File.stat(e.image.path).mode & 0777) )
+    assert e.save
+    assert File.exists?(e.image.path)
+    assert_equal( 0644, (File.stat(e.image.path).mode & 0777) )
+  end
+  
+  def test_permissions
+    Entry.upload_column :image, :permissions => 0755
+    e = Entry.new 
+    e.image = uploaded_file("kerb.jpg", "image/jpeg")
+    assert File.exists?(e.image.path)
+    assert_equal( 0755, (File.stat(e.image.path).mode & 0777) )
+    assert e.save
+    assert File.exists?(e.image.path)
+    assert_equal( 0755, (File.stat(e.image.path).mode & 0777) )
   end
   
 end

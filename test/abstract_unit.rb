@@ -117,7 +117,7 @@ class TestMigration < ActiveRecord::Migration
   def self.up
     create_table :entries do |t|
       t.column :image, :string
-      t.column :file, :string
+      t.column :textfile, :string
     end
     
     create_table :movies do |t|

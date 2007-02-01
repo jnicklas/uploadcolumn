@@ -1,6 +1,6 @@
 valid_entry:
   image: kerb.jpg
-  file: pict.png
+  textfile: pict.png
 blank_entry:
   image: ""
-  file: ""
+  textfile: ""
