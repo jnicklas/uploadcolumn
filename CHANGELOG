@@ -6,6 +6,8 @@
 
 * Added :permissions option to upload_column.
 
+* You can now assign normal Ruby File objects to upload and image columns
+
 * FIXED #8109 Parallell uploads no longer wipe each other out
 
 ============================

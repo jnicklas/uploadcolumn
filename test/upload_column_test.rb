@@ -96,6 +96,14 @@ class UploadColumnTest < Test::Unit::TestCase
     do_test_assign(e)
   end
   
+  def test_assign_without_save_with_file
+    e = Entry.new
+    f = File.open(file_path('skanthak.png'))
+    e.image = f
+    f.close
+    do_test_assign(e)
+  end
+  
   def test_assign_twice
     e = Entry.new
     e.image = uploaded_file("kerb.jpg", "image/jpeg")

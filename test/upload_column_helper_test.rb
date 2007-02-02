@@ -19,11 +19,11 @@ class UploadColumnHelperTest < Test::Unit::TestCase
     entries = YAML::load(File.open(File.join(RAILS_ROOT, 'fixtures', 'entries.yaml')))
     TestMigration.up
     Entry.upload_column :image
-    Entry.upload_column :file
+    Entry.upload_column :textfile
     for entry in entries
       e = Entry.new
       e["image"] = entry[1]["image"]
-      e["file"] = entry[1]["file"]
+      e["textfile"] = entry[1]["textfile"]
       e.save
     end
   end
@@ -35,7 +35,7 @@ class UploadColumnHelperTest < Test::Unit::TestCase
   def test_fixtures
     e = Entry.find(1)
     assert_nil e.image
-    assert_nil e.file
+    assert_nil e.textfile
     e = Entry.find(2)
     assert e.image.is_a?( UploadColumn::UploadedFile )
     assert e.textfile.is_a?( UploadColumn::UploadedFile )

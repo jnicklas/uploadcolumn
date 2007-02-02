@@ -313,8 +313,8 @@ module UploadColumn
         directory = join_path( self.relative_tmp_dir, generate_temp_name )
       end
       
-      basename, self.ext = split_extension(file.original_filename)
-      self.filename = fetch_filename( self.instance, basename, ext )
+      #
+      #self.filename = fetch_filename( self.instance, basename, ext )
       self.relative_dir = directory
       
       FileUtils.mkpath(self.dir)
@@ -324,12 +324,20 @@ module UploadColumn
       # cleaned up automatically, so we do not have to care for this
       # Large files will be passed as tempfiles, whereas small ones
       # will be passed as StringIO
-      if file.respond_to?(:local_path) and file.local_path and File.exists?(file.local_path)
-        self.ext, self.mime_type = fetch_file_extension( file, file.local_path, self.ext )
-        self.filename = fetch_filename( self.instance, basename, self.ext )
-        return false unless check_integrity( self.filename_extension )
-        FileUtils.copy_file( file.local_path, self.path )
+      if temp_path = ( file.respond_to?(:local_path) ? file.local_path : file.path ) and temp_path != "" 
+        if File.exists?(temp_path)
+          temp_filename = file.original_filename if file.respond_to?(:original_filename)
+          temp_filename ||= File.basename(file.path)
+          basename, self.ext = split_extension(temp_filename)
+          self.ext, self.mime_type = fetch_file_extension( file, temp_path, self.ext )
+          self.filename = fetch_filename( self.instance, basename, self.ext )
+          return false unless check_integrity( self.filename_extension )
+          FileUtils.copy_file( temp_path, self.path )
+        else
+          raise ArgumentError.new("File #{file.inspect} at #{temp_path.inspect} does not exist")
+        end
       elsif file.respond_to?(:read)
+        basename, self.ext = split_extension(file.original_filename)
         self.ext, self.mime_type = fetch_file_extension( file, nil, self.ext )
         self.filename = fetch_filename( self.instance, basename, self.ext )
         return false unless check_integrity( self.filename_extension )
@@ -486,7 +494,7 @@ module UploadColumn
       # try to fetch the filename via the 'file' Unix exec
       content_type = get_content_type( local_path )
       # Fetch the content type that was passed from the users browser
-      content_type ||= file.content_type.chomp if file.content_type
+      content_type ||= file.content_type.chomp if file.respond_to?(:content_type) and file.content_type
       
       # Is this one of our known content types?
       if content_type and options[:fix_file_extensions] and options[:mime_extensions][content_type]
@@ -755,7 +763,9 @@ module UploadColumn
             raise TypeError.new("Do not know how to handle a string with value '#{file}' that was passed to an upload_column. Check if the form's encoding has been set to 'multipart/form-data'.")
           end
                    
-          if file and not file.blank? and file.size != 0 and uploaded_file.send(:assign, file)
+          filesize = file.size if file.respond_to?(:size)
+          filesize = file.stat.size if not file and file.respond_to?(:stat)
+          if file and not file.blank? and filesize != 0 and uploaded_file.send(:assign, file)
             instance_variable_set upload_column_attr, uploaded_file
             self.send("#{attr}_after_assign")
             self[attr] = uploaded_file.to_s
