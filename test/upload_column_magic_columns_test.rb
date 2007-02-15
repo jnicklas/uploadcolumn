@@ -108,24 +108,24 @@ class UploadColumnMagicColumnTest < Test::Unit::TestCase
     WidthMigration.up
     Entry.image_column :image
     e = Entry.new
-    e.image = uploaded_file("pict.png", "image/png")
-    assert_equal 550, e.image_width
-    assert_equal 550, e['image_width']
+    e.image = uploaded_file("kerb.jpg", "image/png")
+    assert_equal 640, e.image_width
+    assert_equal 640, e['image_width']
     assert e.save
-    assert_equal 550, e.image_width
-    assert_equal 550, e['image_width']
+    assert_equal 640, e.image_width
+    assert_equal 640, e['image_width']
   end
   
   def test_height
     HeightMigration.up
     Entry.image_column :image
     e = Entry.new
-    e.image = uploaded_file("pict.png", "image/png")
-    assert_equal 417, e.image_height
-    assert_equal 417, e['image_height']
+    e.image = uploaded_file("kerb.jpg", "image/png")
+    assert_equal 480, e.image_height
+    assert_equal 480, e['image_height']
     assert e.save
-    assert_equal 417, e.image_height
-    assert_equal 417, e['image_height']
+    assert_equal 480, e.image_height
+    assert_equal 480, e['image_height']
   end
   
   def test_exif
