@@ -51,8 +51,6 @@ class UploadColumnMagicColumnTest < Test::Unit::TestCase
     # we define the upload_columns here so that we can change
     # settings easily in a single tes
     Entry.upload_column :image, :file_exec => nil, :validate_integrity => false, :fix_file_extensions => false
-    Entry.upload_column :file, :file_exec => nil, :validate_integrity => false, :fix_file_extensions => false
-    Movie.upload_column :movie
   end
   
   def teardown

@@ -8,7 +8,13 @@
 
 * You can now assign normal Ruby File objects to upload and image columns
 
+* upload_form_tag and remote_upload_form_tag now accept a block, just like Rails' form_tag
+
+* You can now pass :none to image_column versions so nothing will be done to your image.
+
 * FIXED #8109 Parallell uploads no longer wipe each other out
+
+* WARNING: Compatibility with Rails < 1.2.1 dropped
 
 ============================
 

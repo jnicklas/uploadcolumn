@@ -20,7 +20,7 @@ module UploadColumnHelper
   # it works exactly like Rails' start_form_tag, except that :multipart is always true
   def upload_form_tag(url_for_options = {}, options = {}, *parameters_for_url, &proc)
     options[:multipart] = true
-    start_form_tag( url_for_options, options, *parameters_for_url, &proc )
+    form_tag( url_for_options, options, *parameters_for_url, &proc )
   end
   
   # What? You cry, files cannot be uploaded using JavaScript! Well,
@@ -36,7 +36,7 @@ module UploadColumnHelper
   # [+before+] JavaScript called before the form is sent (via onsubmit)
   # Note: You can NOT use the normal prototype callbacks in this function, since it does not use
   # Ajax to upload the form.
-  def remote_upload_form_tag( options = {} )
+  def remote_upload_form_tag( options = {}, &block )
     framename = "uf#{Time.now.usec}#{rand(1000)}"
     iframe_options = {
       "style" => "position: absolute; width: 0; height: 0; border: 0;",
@@ -51,15 +51,23 @@ module UploadColumnHelper
 
     form_options["enctype"] = "multipart/form-data"
 
+    url = url_for(options[:url])
+
     if options[:force_html]
       form_options["action"] = url_for(options[:url])
       form_options["target"] = framename
     else
-      form_options["action"] = if options[:fallback] then url_for(options[:fallback]) else url_for(options[:url]) end
-      form_options["onsubmit"] = %(this.action = '#{escape_javascript( url_for(options[:url]) )}'; this.target = '#{escape_javascript( framename )}';)
+      form_options["action"] = if options[:fallback] then url_for(options[:fallback]) else url end
+      form_options["onsubmit"] = %(this.action = '#{escape_javascript( url )}'; this.target = '#{escape_javascript( framename )}';)
       form_options["onsubmit"] << options[:before] if options[:before]
     end
-    tag( :iframe, iframe_options, true ) + '</iframe>' + tag( :form, form_options, true )
+    if block_given?
+      content = capture(&block)
+      concat(tag( :iframe, iframe_options, true ) + '</iframe>', block.binding)
+      form_tag( url, form_options, &block )
+    else
+      tag( :iframe, iframe_options, true ) + '</iframe>' + form_tag( form_options[:action], form_options, &block )
+    end
   end
 
   # Returns an image tag using a URL created by the set of +options+. Accepts the same options

@@ -6,8 +6,6 @@ ActiveRecord::Base.send(:include, UploadColumn)
 ActionView::Base.send(:include, UploadColumnHelper)
 ActionController::Base.send(:include, UploadColumnRenderHelper)
 
-if defined?(Mime::Type) and Mime::Type.respond_to?(:register)
-  Mime::Type.register "image/png", :png
-  Mime::Type.register "image/jpeg", :jpg
-  Mime::Type.register "image/gif", :gif
-end
+Mime::Type.register "image/png", :png
+Mime::Type.register "image/jpeg", :jpg
+Mime::Type.register "image/gif", :gif

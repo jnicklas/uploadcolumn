@@ -290,6 +290,24 @@ class ImageColumnCropTest < Test::Unit::TestCase
     thumb = nil
     GC.start
   end
+ 
+   
+  def test_do_nothing_with_versions
+    Entry.image_column :image, :versions => { :thumb => "100x100", :flat => :none }
+    e = Entry.new
+ 
+    assert_nothing_raised(TypeError) { e.image = uploaded_file(Image2, Mime2) }
+    
+    assert_not_identical( e.image.thumb.path, file_path(Image2) )
+    assert_identical( e.image.flat.path, file_path(Image2) )
+  end
+  
+  def test_do_stupid_stuff_with_versions
+    Entry.image_column :image, :versions => { :thumb => "100x100", :flat => 654 }
+    e = Entry.new
+    assert_raise(TypeError) { e.image = uploaded_file(Image2, Mime2) }
+  end
+  
 
   def test_invalid_image
     e = Entry.new
