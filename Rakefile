@@ -29,5 +29,5 @@ Rake::RDocTask.new(:rdoc_allison) do |rdoc|
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb')
   rdoc.main = "README" # page to start on
-  rdoc.template = "~/sites/allison/allison.rb"
+  rdoc.template = "~/projects/allison/allison.rb"
 end
