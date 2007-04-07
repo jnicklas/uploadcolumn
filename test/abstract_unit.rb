@@ -17,7 +17,7 @@ require File.expand_path(File.join(RAILS_ROOT, '..', 'lib', 'upload_column_rende
 
 # Bootstrap the database
 require 'logger'
-ActiveRecord::Base.logger = Logger.new("debug.log")
+ActiveRecord::Base.logger = Logger.new(File.join(RAILS_ROOT, "debug.log"))
 
 config = YAML::load(File.open("#{RAILS_ROOT}/../../../../config/database.yml"))
 ActiveRecord::Base.establish_connection( config["test"] )
