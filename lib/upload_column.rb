@@ -318,6 +318,7 @@ module UploadColumn
       self.relative_dir = directory
       
       FileUtils.mkpath(self.dir)
+      File.chmod(options[:permissions]|0111, self.dir)
       
       # stored uploaded file into self.path
       # If it was a Tempfile object, the temporary file will be
@@ -364,6 +365,7 @@ module UploadColumn
       self.ext = ext
       self.original_basename = basename
       FileUtils.copy_file( path, self.path )
+      File.chmod(options[:permissions], self.path)
     end
     
     def save
@@ -374,6 +376,7 @@ module UploadColumn
       
       # create the directory first
       FileUtils.mkpath(new_dir) #unless File.exists?(new_di)
+      File.chmod(options[:permissions]|0111, new_dir)
 
       # move the temporary file over
       FileUtils.cp( self.path, new_path )
@@ -612,7 +615,7 @@ module UploadColumn
             self.instance.send("#{self.attribute}_height=".to_sym, height)
           when /^exif_(.*)$/
             if self.mime_type == "image/jpeg"
-              require_gem 'exifr'
+              gem 'exifr'
               i = EXIFR::JPEG.new(self.path)
               self.instance.send("#{self.attribute}_exif_#{$1}=".to_sym, i.exif[$1.to_sym]) if i and i.exif
             end
