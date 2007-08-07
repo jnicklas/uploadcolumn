@@ -1,6 +1,0 @@
-valid_entry:
-  image: kerb.jpg
-  textfile: pict.png
-blank_entry:
-  image: ""
-  textfile: ""

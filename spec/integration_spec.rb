@@ -1,0 +1,377 @@
+require File.join(File.dirname(__FILE__), 'spec_helper')
+
+gem 'activerecord'
+require 'active_record'
+
+require File.join(File.dirname(__FILE__), '../lib/upload_column')
+
+# change this if sqlite is unavailable
+dbconfig = {
+  :adapter => 'sqlite3',
+  :database => 'db/test.sqlite3'
+}
+
+ActiveRecord::Base.establish_connection(dbconfig)
+ActiveRecord::Migration.verbose = false
+
+class TestMigration < ActiveRecord::Migration
+  def self.up
+    create_table :events, :force => true do |t|
+      t.column :image, :string
+      t.column :textfile, :string
+    end
+    
+    create_table :movies, :force => true do |t|
+      t.column :movie, :string
+      t.column :name, :string
+      t.column :description, :text
+    end
+  end
+
+  def self.down
+    drop_table :events
+    drop_table :movies
+  end
+end
+
+class Event < ActiveRecord::Base; end # setup a basic AR class for testing
+class Movie < ActiveRecord::Base; end # setup a basic AR class for testing
+
+def migrate
+  before(:all) { TestMigration.up }
+  after(:all) { TestMigration.down }
+end
+
+describe UploadColumn do
+  
+  describe "uploading a single file" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image)
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb.jpg' )
+    end
+    
+    it "should copy the file to temp." do      
+      File.exists?(@event.image.path).should === true
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb.jpg}
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+  end
+  
+  describe "uploading a file and then saving the record" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image)
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+      @event.save
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'image', 'kerb.jpg')
+    end
+    
+    it "should copy the file to the correct location" do
+      File.exists?(@event.image.path)
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should == "/image/kerb.jpg"
+    end
+    
+    it "should save the filename to the database" do
+      Event.find(@event.id)['image'].should == 'kerb.jpg'
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+    
+  end
+  
+  describe "uploading a file with versions" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image, :versions => [ :thumb, :large ] )
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb.jpg' )
+      @event.image.thumb.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-thumb.jpg' )
+      @event.image.large.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-large.jpg' )
+    end
+    
+    it "should copy the file to temp." do      
+      File.exists?(@event.image.path).should === true
+      File.exists?(@event.image.thumb.path).should === true
+      File.exists?(@event.image.large.path).should === true
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.thumb.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.large.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb.jpg}
+      @event.image.thumb.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-thumb.jpg}
+      @event.image.large.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-large.jpg}
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+    
+  end
+  
+  describe "uploading a file with versions and then saving the record" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image, :versions => [ :thumb, :large ] )
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+      @event.save
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'image', 'kerb.jpg' )
+      @event.image.thumb.path.should match_path(PUBLIC, 'image', 'kerb-thumb.jpg' )
+      @event.image.large.path.should match_path(PUBLIC, 'image', 'kerb-large.jpg' )
+    end
+    
+    it "should copy the file to the correct location." do      
+      File.exists?(@event.image.path).should === true
+      File.exists?(@event.image.thumb.path).should === true
+      File.exists?(@event.image.large.path).should === true
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.thumb.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.large.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should == "/image/kerb.jpg"
+      @event.image.thumb.url.should == "/image/kerb-thumb.jpg"
+      @event.image.large.url.should == "/image/kerb-large.jpg"
+    end
+    
+    it "should save the filename to the database" do
+      Event.find(@event.id)['image'].should == 'kerb.jpg'
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+    
+  end
+  
+  
+  describe "assigning a file from temp with versions" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image, :versions => [ :thumb, :large ] )
+      @blah = Event.new
+      
+      @event = Event.new
+  
+      @blah.image = stub_tempfile('kerb.jpg') # we've alredy tested this...
+      
+      @event.image_temp = @blah.image_temp
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should == @blah.image.path
+      @event.image.thumb.path.should == @blah.image.thumb.path
+      @event.image.large.path.should == @blah.image.large.path
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should == @blah.image.url
+      @event.image.thumb.url.should == @blah.image.thumb.url
+      @event.image.large.url.should == @blah.image.large.url
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+    
+  end
+  
+  
+  describe "assigning a file from temp with versions and then saving the record" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image, :versions => [ :thumb, :large ] )
+      @blah = Event.new
+      
+      @event = Event.new
+  
+      @blah.image = stub_tempfile('kerb.jpg') # we've alredy tested this...
+      
+      @event.image_temp = @blah.image_temp
+      
+      @event.save
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'image', 'kerb.jpg' )
+      @event.image.thumb.path.should match_path(PUBLIC, 'image', 'kerb-thumb.jpg' )
+      @event.image.large.path.should match_path(PUBLIC, 'image', 'kerb-large.jpg' )
+    end
+    
+    it "should copy the file to the correct location." do      
+      File.exists?(@event.image.path).should === true
+      File.exists?(@event.image.thumb.path).should === true
+      File.exists?(@event.image.large.path).should === true
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.thumb.path.should be_identical_with(file_path('kerb.jpg'))
+      @event.image.large.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should == "/image/kerb.jpg"
+      @event.image.thumb.url.should == "/image/kerb-thumb.jpg"
+      @event.image.large.url.should == "/image/kerb-large.jpg"
+    end
+    
+    it "should save the filename to the database" do
+      Event.find(@event.id)['image'].should == 'kerb.jpg'
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+    
+  end
+  
+  describe "uploading an image with several versions, the rmagick manipulator and instructions to rescale" do
+    
+    migrate
+    
+    # buuhuu so sue me. This spec runs a whole second faster if we do this before all instead of
+    # before each.
+    before(:all) do
+      Event.upload_column(:image,
+        :versions => { :thumb => 'c100x100', :large => '200x200' },
+        :manipulator => UploadColumn::Manipulators::RMagick
+      )
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+    end
+    
+    it "should set the correct path" do
+      @event.image.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb.jpg' )
+      @event.image.thumb.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-thumb.jpg' )
+      @event.image.large.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-large.jpg' )
+    end
+    
+    it "should copy the files to temp." do   
+      File.exists?(@event.image.path).should === true
+      File.exists?(@event.image.thumb.path).should === true
+      File.exists?(@event.image.large.path).should === true
+    end
+    
+    it "should set the correct url" do
+      @event.image.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb.jpg}
+      @event.image.thumb.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-thumb.jpg}
+      @event.image.large.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-large.jpg}
+    end
+    
+    it "should preserve the main file" do
+      @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should change the versions" do
+      @event.image.thumb.path.should_not be_identical_with(file_path('kerb.jpg'))
+      @event.image.large.path.should_not be_identical_with(file_path('kerb.jpg'))
+    end
+    
+    it "should rescale the images to the correct sizes" do
+      @event.image.large.should be_no_larger_than(200, 200)
+      @event.image.thumb.should have_the_exact_dimensions_of(100, 100)
+    end
+    
+    after(:all) do
+      FileUtils.rm_rf(PUBLIC)
+    end
+  end
+  
+  
+  # TODO: make image_science not crap out on my macbook
+  #describe "uploading an image with several versions, the image_science manipulator and instructions to rescale" do
+  #  
+  #  migrate
+  #  
+  #  # buuhuu so sue me. This spec runs a whole second faster if we do this before all instead of
+  #  # before each.
+  #  before(:all) do
+  #    Event.upload_column(:image,
+  #      :versions => { :thumb => 'c100x100', :large => '200x200' },
+  #      :manipulator => UploadColumn::Manipulators::ImageScience
+  #    )
+  #    @event = Event.new
+  #    @event.image = stub_tempfile('kerb.jpg')
+  #  end
+  #  
+  #  it "should set the correct path" do
+  #    @event.image.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb.jpg' )
+  #    @event.image.thumb.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-thumb.jpg' )
+  #    @event.image.large.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'kerb-large.jpg' )
+  #  end
+  #  
+  #  it "should copy the files to temp." do   
+  #    File.exists?(@event.image.path).should === true
+  #    File.exists?(@event.image.thumb.path).should === true
+  #    File.exists?(@event.image.large.path).should === true
+  #  end
+  #  
+  #  it "should set the correct url" do
+  #    @event.image.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb.jpg}
+  #    @event.image.thumb.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-thumb.jpg}
+  #    @event.image.large.url.should =~ %r{/tmp/(?:\d+\.)+\d+/kerb-large.jpg}
+  #  end
+  #  
+  #  it "should preserve the main file" do
+  #    @event.image.path.should be_identical_with(file_path('kerb.jpg'))
+  #  end
+  #  
+  #  it "should change the versions" do
+  #    @event.image.thumb.path.should_not be_identical_with(file_path('kerb.jpg'))
+  #    @event.image.large.path.should_not be_identical_with(file_path('kerb.jpg'))
+  #  end
+  #  
+  #  it "should rescale the images to the correct sizes" do
+  #    @event.image.large.should be_no_larger_than(200, 200)
+  #    @event.image.thumb.should have_the_exact_dimensions_of(100, 100)
+  #  end
+  #  
+  #  after(:all) do
+  #    FileUtils.rm_rf(PUBLIC)
+  #  end
+  #end
+  
+end

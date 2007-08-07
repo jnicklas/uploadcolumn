@@ -1,34 +1,27 @@
 =UploadColumn
 
-Upload_column is a plugin for the Ruby on Rails framework that enables easy uploading of files, especially images.
+UploadColumn is a plugin for the Ruby on Rails framework that enables easy uploading of files, especially images.
 
 Suppose you have a list of users, and you would like to associate a picture to each of them. You could upload the image to a database, or you could use upload_column for simple storage to the file system.
 
-Let's create our database first, generate a migration (if you're not using migrations yet you are missing out!) and add
-
-    create_table "users" do |t|
-      t.column "name", :string
-      t.column "picture", :string
-    end
-
-Now generate a scaffold for your user class
-
-Create your model class and add the upload_column method call:
+Assuming you have a User model with a column called 'picture' that is of type String, you could simply add the upload_column instruction to your User model:
 
     class User < ActiveRecord::Base
       upload_column :picture
     end
 
-Have a look at UploadColumn::ClassMethods.upload_column to find out more about specialized options. Note that the picture column in the database will not store the actual picture, it will only store the filename.
+That's it! You can start uploading files. Of course, +upload_column+ has a lot of different options you can use to customize your uploads.
 
-Now just open up your _form.rhtml partial, and edit it so it looks like the following:
+Uploading files is no fun without a user interface, so get going and make one:
+
+add an upload_column_field to your form, maybe like this:
 
     <p><label for="user_picture">Picture</label><br/>
     <%= upload_column_field 'user', 'picture'  %></p>
     
-Here we're making a call to UploadColumnHelper.upload_column_field, this will create an input field of the file type.
+You should use upload_column_field instead of Rails' file_field, since it will work even when the form is redisplayed, like when a validation fails. Unfortunately file_field doesn't work in that case.
 
-We'll need to set the form to multipart, so that the picture will actually be sent as well. You can use the upload_form_tag helper:
+Now that's excellent, but most likely it will fail, because instead of sending the file, it just sends a string. No worries though, if we just set the form's encoding to multipart it will all work out, UploadColumn even comes with some nice helpers to avoid that nasty multipart syntax. This could look something like this:
 
     <%= upload_form_tag( :action => 'create' ) %>
 
@@ -42,23 +35,13 @@ You won't always want to store the pictures in the directory that upload_column 
     
 might be sensible in our case. Note that this way, all files will be stored in the same directory.
 
-If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a callback method. In our case the method would be called +picture_store_dir+. Just append +_store_dir+ to your upload_column field.
+If you need more refined control over the storage path (maybe you need to store it by the id of an association?) then you can use a proc instead. Our proc might look like this:
 
-    def picture_store_dir
-      "images/#{self.category.name}/#{self.id}"
-    end
-
-A shorter way to do something like this is to pass a Proc to :store_dir, like so:
-
-    upload_column :picture, :store_dir => proc{|inst, attr| "images/#{inst.category.name}/#{inst.id}"}
+    upload_column :picture, :store_dir => proc{|record, file| "images/#{record.category.name}/#{record.id}/#{file.extension}"}
 
 The proc will be passed two parameters, the first is the current instance of your model class, the second is the name of the attribute that is being uploaded to (in our case attr would be :picture).
 
-You can change the :tmp_dir in the same way. For reference: the default for :store_dir is the following proc:
-
-    proc{|inst, attr| File.join(Inflector.underscore(inst.class).to_s, attr.to_s, inst.id.to_s) }
-    
-Note how it uses File.join, if you plan to use your code on Windows systems you should use File.join, since Windows uses backslashes instead of forwardslashes. File.join takes care of that automatically.
+You can change the :tmp_dir in the same way.
 
 == Filename
 
@@ -68,30 +51,34 @@ By default, UploadColumn will keep the name of the original file, however this m
     
 In which case all files will be named <tt>donkey.png</tt>. This is not desirable if the file in question is a jpeg file of course. Usually it is more sensible to pass a Proc to :filename.
 
-    upload_column :picture, :filename => proc{|inst, orig, ext| "avatar#{inst.id}.#{ext}"}
+    upload_column :picture, :filename => proc{|record, file| "avatar#{record.id}.#{file.extension}"}
     
-The Proc will be passed three parameters, the current instance, the basename of the original file (without the extension) and the properly corrected extension.
+The Proc will be passed two parameters, the current instance, and the file itself.
 
-You can also use the +picture_filename+ callback, which must take two arguments, the original basename and the corrected extension.
+== Manipulators
+
+UploadColumn allows you to use manipulators on your file, that in some way transform your file, or perform any kind of operations on it. There are currently two manipulators bundled, the RMagick manipulator and the ImageScience manipulator, but writing your own is very easy. There are further instructions on the website.
 
 == Manipulating Images with RMagick
 
 Say you would want (for whatever reason) to have a funky solarize effect on your users' images. Manipulating images with upload_column can be done either at runtime or after the image is saved, let's look at some possibilities:
 
     class User < ActiveRecord::Base
-      upload_column :picture
+      upload_column :picture, :manipulator => UploadColumn::Manipulators::RMagick
       
       def picture_after_assign
+        
         picture.process! do |img|
           img.solarize
-        end      
+        end
+        
       end
     end
 
 Or maybe we want different versions of our image, then we could simply specify:
  
     class User < ActiveRecord::Base
-      upload_column :picture, :versions => [ :solarized, :sepiatoned ]
+      upload_column :picture, :versions => [ :solarized, :sepiatoned ], :manipulator => UploadColumn::Manipulators::RMagick
       
       def picture_after_assign
         picture.solarized.process! do |img|
@@ -102,20 +89,20 @@ Or maybe we want different versions of our image, then we could simply specify:
         end
       end
     end
-
-== Image column
-
-If you only want to upload images, then UploadColumn comes with a convenient method, +image_column+ works basically the same way as +upload_column+ but it is especially trimmed for work with images.
-
-The mime_extensions and extensions parameters are restricted to those used for images, so +validates_integrity_of+ can be used to easily restrict uploads to images only.
-
-Most importantly if you use image_column you can resize the images automagickaly (sorry) when they are assigned, just pass a Hash, like in the following example:
+    
+you can also use a Hash for versions and pass a dimension or a proc to it, so you can do:
 
     class User < ActiveRecord::Base
-      image_column :picture, :versions => { :thumb => "100x100", :large => "200x300" }
+      upload_column :picture, :versions => { :thumb => "c100x100", :large => "200x300", :sepiatoned => proc{ |img| img.sepiatone } }, :manipulator => UploadColumn::Manipulators::RMagick
+    end
+    
+Note the 'c' in front of the dimensions for the thumb image, this will crop the image to the exact dimensions. All of this is a bit wordy though, and it also doesn't take check, that the files really are images. Sepiatoning the latest GreenDay song somehow doesn't sound too good. For that reason UploadColumn comes with the image_column function:
+
+    class User < ActiveRecord::Base
+      image_column :picture, :versions => { :thumb => "c100x100", :large => "200x300", :sepiatoned => proc{ |img| img.sepiatone } }
     end
 
-If you need the image to be cropped to the exact dimensions, you can pass <tt>:crop => true</tt>.
+This also puts your images in public/images instead of public, which is neat!
 
 == Runtime rendering
 
@@ -146,7 +133,7 @@ If your uploaded file is an image you would most likely want to display it in yo
 
 UploadColumn allows you to add 'magic' columns to your model, which will be automatically filled with the appropriate data. Just add the column, for example via migrations:
 
-    add_column :users, :picture_mime_type
+    add_column :users, :picture_content_type
 
 And if our model looks like this:
 
@@ -154,23 +141,21 @@ And if our model looks like this:
       upload_column :picture
     end
 
-The column <tt>picture_mime_type</tt> will now automatically be filled with the file's mime-type (or at least with UploadColumn's best guess ;).
+The column <tt>picture_content_type</tt> will now automatically be filled with the file's content-type (or at least with UploadColumn's best guess ;).
 
-The following are available for upload_column fields:
+You can use any method method on UploadColumn::UploadedFile that takes no argument, so you can use for example, size, url, store_dir and so on.
 
-[+_mime_type+] Will contain the file's mime_type
-[+_filesize+] Will contain the file's size in bytes
-
-If you use image_column you can even add:
-
-[+_width+] Will contain the image's width
-[+_height+] Will contain the image's height
-
-You can also do <tt>picture_exif_date_time</tt> or <tt>picture_exif_model</tt>, etc. if picture is an image_column and the uploaded image i a JPEG file. This requires EXIFR, which you can get by installing the gem via <tt>gem install exifr</tt>.
+You can also do <tt>picture_exif_date_time</tt> or <tt>picture_exif_model</tt>, etc. This works only, of course, if the uploaded file is a JPEG image, since that is the only filetype that has exif data. This requires the EXIFR library, which you can get by installing the gem via <tt>gem install exifr</tt>.
       
 == Validations
 
-You can use SOME of Rails validations with UploadColumn
+UploadColumn comes with its own validation method, validates_integrity_of. This method will ensure that only files with an extension from a whitelist will be uploaded. This prevents a hacker from uploading executable files (such as .rb, .pl or .cgi for example) or it can be used to restrict what kind of file are allowed to be uploaded, for example only images. You can customize the whitelist with the :extensions parameter to upload column.
+
+If you want to only allow the upload of XHTML and XML files, so you can manipulate them with XSLT you could do:
+
+    upload_column :xml, :extensions => %w(xml html htm), :manipulator => MyXSLTProcessor
+
+You can also use some of Rails' validations with UploadColumn.
 
 validates_presence_of and validates_size_of have been verified to work. 
 

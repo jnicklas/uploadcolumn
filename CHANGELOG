@@ -1,3 +1,35 @@
+0.3
+
+[NEW] Complete rewrite, maintaining most of the legacy API
+
+[NEW] Support for a whole range of custom manipulators
+
+[NEW*] Manipulate images with ImageScience instead of RMagick if you want
+
+[NEW] Support for animated GIFs in the RMagick manipulator
+
+[NEW] Fully tested with RSpec
+
+[NEW*] You can now set a default image if the column is blank
+
+[NEW*] Integrated mocking support, to make testing your UploadColumns easier.
+
+[CHANGED*] Store dir and temp dir procs now take two piped variables, the UploadedFile object and the ActiveRecord
+
+[CHANGED] the :root_path option is now called :root_dir
+
+[CHANGED] web_root must now be set with a leading slash if an abolute URL is desired and no trailing slash.
+
+[CHANGED] UploadedFile#filename_base is removed in favor of #basename
+
+[CHANGED] UploadedFile#filename_extension is removed in favor of #extension
+
+[CHANGED] UploadedFile#mime_type is removed in favor of #content_type
+
+[DEPRECATED] _store_dir and _tmp_dir callbacks are deprecated
+
+============================
+
 0.2.1
 
 * Added :force_format option to image_column

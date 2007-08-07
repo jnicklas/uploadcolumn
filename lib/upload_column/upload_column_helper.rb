@@ -92,7 +92,7 @@ module UploadColumnHelper
 
 end
 
-class ActionView::Helpers::FormBuilder
+class ActionView::Helpers::FormBuilder #:nodoc:
   self.field_helpers += ['upload_column_field']  
   def upload_column_field(method, options = {})
     @template.send(:upload_column_field, @object_name, method, options.merge(:object => @object))
