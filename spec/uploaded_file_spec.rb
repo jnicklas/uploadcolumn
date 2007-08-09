@@ -42,6 +42,11 @@ describe "SanitizedFile", :shared => true do
       t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "."))
       t.filename.should == "_."
     end
+    
+    it "should downcase uppercase filenames" do
+      t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "DSC4056.JPG"))
+      t.filename.should == "dsc4056.jpg"
+    end
   
   end
   

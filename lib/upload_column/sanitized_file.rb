@@ -131,7 +131,7 @@ module UploadColumn
           return mimes.first.extensions.first unless mimes.first.extensions.empty?
         end
       end
-      return ext
+      return ext.downcase
     end
     
     # Try to use *nix exec to fetch content type
@@ -160,7 +160,7 @@ module UploadColumn
       name.gsub!(/[^a-zA-Z0-9\.\-\+_]/,"_")
       name = "_#{name}" if name =~ /^\.+$/ # huh? some specific browser fix?
       name = "unnamed" if name.size == 0
-      return name
+      return name.downcase
     end
     
     def split_extension(fn)
