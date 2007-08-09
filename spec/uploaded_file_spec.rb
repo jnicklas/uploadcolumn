@@ -902,6 +902,28 @@ describe "UploadedFile" do
     
   end
   
+  describe "an UploadedFile with a manipulator and process instruction" do
+    
+    it "should process before iterating versions" do
+      process_proxy = mock('nothing in particular')
+      a_manipulator = Module.new
+      a_manipulator.send(:define_method, :process!) do |*args|
+        process_proxy.process!(*args)
+      end
+      # this will override the base classes initialize_versions option, so we can catch it.
+      a_manipulator.send(:define_method, :initialize_versions) do |*args|
+        process_proxy.initialize_versions *args
+      end
+
+      process_proxy.should_receive(:process!).with('100x100').ordered
+      process_proxy.should_receive(:initialize_versions).ordered
+
+
+      @file = UploadColumn::UploadedFile.upload(stub_file('kerb.jpg'), nil, :donkey, :process => '100x100', :manipulator => a_manipulator)
+    end
+
+  end
+  
   describe "an UploadedFile with no versions" do
     it "should not respond to version methods" do
       @file = UploadColumn::UploadedFile.upload(stub_file('kerb.jpg'), nil, :monkey)

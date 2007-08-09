@@ -37,7 +37,8 @@ module UploadColumn
       :root_dir => File.join(RAILS_ROOT, 'public'),
       :file_exec => 'file',
       :fix_file_extensions => false,
-      :web_root => nil
+      :web_root => nil,
+      :process => nil
     }
     
     attr_reader :instance, :attribute, :options, :versions
@@ -88,7 +89,11 @@ module UploadColumn
 
           @temp_name = generate_tmpname
           @new_file = true
+          
           move_to(File.join(tmp_dir, @temp_name, filename))
+          
+          self.process!(@options[:process]) if @options[:process] and self.respond_to?(:process!)
+          
           initialize_versions do |version|
             # Copy the file and store it in the versions array
             self.copy_to(File.join(self.dir, "#{self.basename}-#{version}.#{self.extension}"))
