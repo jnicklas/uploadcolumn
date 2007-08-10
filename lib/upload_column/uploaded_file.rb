@@ -107,10 +107,10 @@ module UploadColumn
         initialize_versions
       when :retrieve_temp
         if file and not file.empty?
-          dir, name, original_filename = file.scan( ::UploadColumn::TempValueRegexp ).first
+          @temp_name, name, original_filename = file.scan( ::UploadColumn::TempValueRegexp ).first
 
-          if dir and name
-            @path = File.join(tmp_dir, dir, name)
+          if @temp_name and name
+            @path = File.join(tmp_dir, @temp_name, name)
             @basename, @extension = split_extension(name)
             @original_filename = original_filename
             initialize_versions

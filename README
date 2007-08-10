@@ -1,4 +1,4 @@
-=UploadColumn
+= UploadColumn
 
 UploadColumn is a plugin for the Ruby on Rails framework that enables easy uploading of files, especially images.
 
@@ -18,7 +18,7 @@ add an upload_column_field to your form, maybe like this:
 
     <p><label for="user_picture">Picture</label><br/>
     <%= upload_column_field 'user', 'picture'  %></p>
-    
+
 You should use upload_column_field instead of Rails' file_field, since it will work even when the form is redisplayed, like when a validation fails. Unfortunately file_field doesn't work in that case.
 
 Now that's excellent, but most likely it will fail, because instead of sending the file, it just sends a string. No worries though, if we just set the form's encoding to multipart it will all work out, UploadColumn even comes with some nice helpers to avoid that nasty multipart syntax. This could look something like this:
@@ -39,9 +39,9 @@ If you need more refined control over the storage path (maybe you need to store 
 
     upload_column :picture, :store_dir => proc{|record, file| "images/#{record.category.name}/#{record.id}/#{file.extension}"}
 
-The proc will be passed two parameters, the first is the current instance of your model class, the second is the name of the attribute that is being uploaded to (in our case attr would be :picture).
+The proc will be passed two parameters, the first is the current instance of your model class, the second is the name of the attribute that is being uploaded to (in our case +attr+ would be <tt>:picture</tt>).
 
-You can change the :tmp_dir in the same way.
+You can change the <tt>:tmp_dir</tt> in the same way.
 
 == Filename
 
@@ -49,7 +49,7 @@ By default, UploadColumn will keep the name of the original file, however this m
 
     upload_column :picture, :filename => "donkey.png"
     
-In which case all files will be named <tt>donkey.png</tt>. This is not desirable if the file in question is a jpeg file of course. Usually it is more sensible to pass a Proc to :filename.
+In which case all files will be named +donkey.png+. This is not desirable if the file in question is a jpeg file of course. Usually it is more sensible to pass a Proc to :filename.
 
     upload_column :picture, :filename => proc{|record, file| "avatar#{record.id}.#{file.extension}"}
     
@@ -57,7 +57,9 @@ The Proc will be passed two parameters, the current instance, and the file itsel
 
 == Manipulators
 
-UploadColumn allows you to use manipulators on your file, that in some way transform your file, or perform any kind of operations on it. There are currently two manipulators bundled, the RMagick manipulator and the ImageScience manipulator, but writing your own is very easy. There are further instructions on the website.
+UploadColumn allows you to use manipulators on your file, that in some way transform your file, or perform any kind
+of operations on it. There are currently two manipulators bundled, the RMagick manipulator and the ImageScience
+manipulator, but writing your own is very easy. There are further instructions on the website.
 
 == Manipulating Images with RMagick
 
@@ -73,6 +75,18 @@ Say you would want (for whatever reason) to have a funky solarize effect on your
         end
         
       end
+    end
+
+You can also use the :process instruction, which will automatically apply the manipulation when a new image is uploaded. If you wanted to resize your image to a maximum of 800 by 600 pixels for example, you could do:
+
+    class User < ActiveRecord::Base
+      upload_column :picture, :process => '800x600', :manipulator => UploadColumn::Manipulators::RMagick
+    end
+    
+the previous example with solarize could be written shorter as:
+
+    class User < ActiveRecord::Base
+      upload_column :picture, :process => proc{|img| img.solarize }, :manipulator => UploadColumn::Manipulators::RMagick
     end
 
 Or maybe we want different versions of our image, then we could simply specify:

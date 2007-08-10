@@ -1358,4 +1358,16 @@ describe "UploadedFile" do
       @file.temp_value.should match(/kerb\.jpg;monkey\.png$/)
     end
   end
+  
+  describe "the temp_value of a retrieved temporary UploadedFile" do
+    
+    setup do
+      @file = UploadColumn::UploadedFile.retrieve_temp('12345.1234.12345/kerb.jpg', nil, :donkey)
+      @file.should_receive(:original_filename).at_least(:once).and_return(nil)
+    end
+    
+    it "should be mainatained" do
+      @file.temp_value.should == '12345.1234.12345/kerb.jpg'
+    end
+  end
 end
