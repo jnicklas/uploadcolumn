@@ -268,6 +268,61 @@ describe UploadColumn do
     
   end
   
+  describe "an upload_column with an uploaded file" do
+    
+    migrate
+    
+    before do
+      Event.upload_column(:image)
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+      @event.save
+    end
+    
+    it "should not be overwritten by an empty String" do
+      @e2 = Event.find(@event.id)
+      lambda {
+        @e2.image = ""
+        @e2.save
+      }.should_not change(@e2.image, :path)
+      @e2[:image].should == "kerb.jpg"
+    end
+    
+    it "should not be overwritten by an empty StringIO" do
+      @e2 = Event.find(@event.id)
+      lambda {
+        @e2.image = StringIO.new('')
+        @e2.save
+      }.should_not change(@e2.image, :path)
+      @e2[:image].should == "kerb.jpg"
+    end
+    
+    it "should not be overwritten by an empty file" do
+      @e2 = Event.find(@event.id)
+      lambda {
+        file = stub_file('kerb.jpg')
+        file.stub!(:size).and_return(0)
+        @e2.image = file
+        @e2.save
+      }.should_not change(@e2.image, :path)
+      @e2[:image].should == "kerb.jpg"
+    end
+    
+    it "should be overwritten by another file" do
+      @e2 = Event.find(@event.id)
+      lambda {
+        file = stub_file('skanthak.png')
+        @e2.image = file
+        @e2.save
+      }.should_not change(@e2.image, :path)
+      @e2[:image].should == "skanthak.png"
+    end
+    
+    after do
+      FileUtils.rm_rf(PUBLIC)
+    end
+  end
+  
   describe "uploading an image with several versions, the rmagick manipulator and instructions to rescale" do
     
     migrate

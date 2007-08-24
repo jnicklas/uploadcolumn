@@ -176,10 +176,21 @@ describe "saving uploaded files" do
     setup_standard_mocking
   end
   
-  it "should call save on the uploaded file" do
+  it "should call save on the uploaded file if they are temporary files" do
     UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
     
+    @uploaded_file.should_receive(:tempfile?).and_return(true)
     @uploaded_file.should_receive(:save)
+    @entry.avatar = @file
+    
+    @entry.send(:save_uploaded_files)
+  end
+  
+  it "should not call save on the uploaded file if they are not temporary files" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
+    
+    @uploaded_file.should_receive(:tempfile?).and_return(false)
+    @uploaded_file.should_not_receive(:save)
     @entry.avatar = @file
     
     @entry.send(:save_uploaded_files)

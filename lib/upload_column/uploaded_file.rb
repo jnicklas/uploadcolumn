@@ -182,6 +182,10 @@ module UploadColumn
       "<UploadedFile: #{self.path}>"
     end
     
+    def tempfile?
+      @temp_name
+    end
+    
     private
     
     def initialize_versions
@@ -232,6 +236,7 @@ module UploadColumn
       self.move_to(File.join(self.store_dir, self.filename))
       self.versions.each {|version, file| file.move_to(File.join(self.store_dir, file.filename))} if self.versions
       @new_file = false
+      @temp_name = nil
       true
     end
     

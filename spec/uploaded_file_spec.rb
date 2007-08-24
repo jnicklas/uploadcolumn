@@ -812,6 +812,10 @@ describe "UploadedFile" do
       @file.should be_new_file
     end
     
+    it "should be a tempfile" do
+      @file.should be_a_tempfile
+    end
+    
     it "should exist" do
       @file.should be_in_existence
     end
@@ -853,6 +857,10 @@ describe "UploadedFile" do
     
     it "should not be new" do
       @file.should_not be_new_file
+    end
+    
+    it "should not be a tempfile" do
+      @file.should_not be_a_tempfile
     end
     
     it "should return the correct path" do
@@ -1069,6 +1077,10 @@ describe "UploadedFile" do
       @file.should_not be_new_file
     end
     
+    it "should not be a tempfile" do
+      @file.should_not be_a_tempfile
+    end
+    
     it "should return the correct path" do
       @file.path.should match_path(public_path('monkey/kerb.jpg'))
     end
@@ -1086,6 +1098,10 @@ describe "UploadedFile" do
     
     it "should not be new" do
       @file.should_not be_new_file
+    end
+    
+    it "should not be a tempfile" do
+      @file.should_not be_a_tempfile
     end
     
     it "should return the correct path" do
@@ -1108,6 +1124,10 @@ describe "UploadedFile" do
     
     it "should not be new" do
       @file.should_not be_new_file
+    end
+    
+    it "should  not be a tempfile" do
+      @file.should_not be_a_tempfile
     end
     
     it "should return the correct path" do
@@ -1172,6 +1192,10 @@ describe "UploadedFile" do
       @file.should_not be_new_file
     end
     
+    it "should be a tempfile" do
+      @file.should be_a_tempfile
+    end
+    
     it "should return the correct path" do
       @file.path.should match_path('public', 'tmp', '123455.1233.1233', 'kerb.jpg')
     end
@@ -1193,6 +1217,10 @@ describe "UploadedFile" do
     
     it "should not be new" do
       @file.should_not be_new_file
+    end
+    
+    it "should be a tempfile" do
+      @file.should be_a_tempfile
     end
     
     it "should return the correct original filename" do
@@ -1225,6 +1253,10 @@ describe "UploadedFile" do
     
     it "should not be new" do
       @file.should_not be_new_file
+    end
+    
+    it "should be a tempfile" do
+      @file.should be_a_tempfile
     end
     
     it "should return the correct path" do

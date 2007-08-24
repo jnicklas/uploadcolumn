@@ -17,7 +17,7 @@ module UploadColumn
   private
   
   def save_uploaded_files
-    @files.each { |k, v| v.send(:save) } if @files
+    @files.each { |k, v| v.send(:save) if v.tempfile? } if @files
   end
 
   module ClassMethods
