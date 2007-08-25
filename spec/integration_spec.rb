@@ -429,4 +429,21 @@ describe UploadColumn do
   #  end
   #end
   
+  describe "uploading a file with an extension that is not in the whitelist" do
+    
+    migrate
+    
+    before(:each) do
+      Event.upload_column(:image, :fix_file_extensions => false)
+      Event.validates_integrity_of :image
+      
+      @event = Event.new
+    end
+    
+    it "should add an error to the record" do
+      @event.image = stub_tempfile('kerb.jpg', nil, 'monkey.exe')
+      @event.errors.on(:image).should == ".exe is not in the list of allowed extensions."
+    end
+  end
+  
 end

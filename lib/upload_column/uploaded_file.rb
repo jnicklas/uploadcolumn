@@ -31,16 +31,6 @@ module UploadColumn
   # See the +README+ for more detaills.
   class UploadedFile < SanitizedFile
     
-    DEFAULTS = {
-      :tmp_dir => 'tmp',
-      :store_dir => proc{ |r, f| f.attribute.to_s },
-      :root_dir => File.join(RAILS_ROOT, 'public'),
-      :file_exec => 'file',
-      :fix_file_extensions => false,
-      :web_root => nil,
-      :process => nil
-    }
-    
     attr_reader :instance, :attribute, :options, :versions
     attr_accessor :suffix
     
@@ -67,7 +57,7 @@ module UploadColumn
     end
     
     def initialize(mode, file, instance, attribute, options={})
-      @options = DEFAULTS.merge(options)
+      @options = options.reverse_merge(UploadColumn::DEFAULTS)
       @instance = instance
       @attribute = attribute
       

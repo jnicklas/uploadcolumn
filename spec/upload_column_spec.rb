@@ -1,10 +1,9 @@
 require File.join(File.dirname(__FILE__), 'spec_helper')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/sanitized_file')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/uploaded_file')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/upload_column')
 
 gem 'activerecord'
 require 'active_record'
+
+require File.join(File.dirname(__FILE__), '../lib/upload_column')
 
 ActiveRecord::Base.send(:include, UploadColumn)
 
@@ -324,5 +323,20 @@ describe "an upload column with no file" do
   end
 end
 
-
-
+describe "UploadColumn.image_column" do
+  before(:each) do
+    @class = Class.new(ActiveRecord::Base)
+    @class.send(:include, UploadColumn)
+  end
+  
+  it "should call an upload column with some specialized options" do
+    @class.should_receive(:upload_column).with(:sicada,
+      :manipulator => UploadColumn::Manipulators::RMagick,
+      :root_dir => File.join(RAILS_ROOT, 'public', 'images'),
+      :web_root => '/images',
+      :monkey => 'blah',
+      :extensions => UploadColumn::IMAGE_EXTENSIONS
+    )
+    @class.image_column(:sicada, :monkey => 'blah')
+  end
+end

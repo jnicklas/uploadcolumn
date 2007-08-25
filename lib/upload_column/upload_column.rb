@@ -12,6 +12,22 @@ module UploadColumn
   EXTENSIONS = %w(asf avi css doc dvi gif gz html jpg js m3u mov mp3 mpeg odf pac pdf png ppt ps sig spl swf tar tar.gz torrent txt wav wax wm wma xbm xml xpm xsl xwd zip)
   IMAGE_EXTENSIONS = %w(jpg jpeg gif png)
   
+  DEFAULTS = {
+    :tmp_dir => 'tmp',
+    :store_dir => proc{ |r, f| f.attribute.to_s },
+    :root_dir => File.join(RAILS_ROOT, 'public'),
+    :get_content_type_from_file_exec => true,
+    :fix_file_extensions => false,
+    :web_root => nil,
+    :process => nil,
+    :permissions => 0644,
+    :extensions => UploadColumn::EXTENSIONS,
+    :web_root => '',
+    :manipulator => nil,
+    :versions => nil,
+    :validate_integrity => false
+  }
+  
   Column = Struct.new(:name, :options)
   
   private
@@ -36,8 +52,8 @@ module UploadColumn
     # [+store_dir+] Determines where the file will be stored permanently, you can pass a String or a Proc that takes the current instance and the attribute name as parameters, see the +README+ for detaills.
     # [+tmp_dir+] Determines where the file will be stored temporarily before it is stored to its final location, you can pass a String or a Proc that takes the current instance and the attribute name as parameters, see the +README+ for detaills.
     # [+old_files+] Determines what happens when a file becomes outdated. It can be set to one of <tt>:keep</tt>, <tt>:delete</tt> and <tt>:replace</tt>. If set to <tt>:keep</tt> UploadColumn will always keep old files, and if set to :delete it will always delete them. If it's set to :replace, the file will be replaced when a new one is uploaded, but will be kept when the associated object is deleted. Default to :delete.
-    # [+permissions+] Specify the Unix permissions to be used with UploadColumn. Defaults to 0644.
-    # [+root_path+] The root path where image will be stored, it will be prepended to store_dir and tmp_dir
+    # [+permissions+] Specify the Unix permissions to be used with UploadColumn. Defaults to 0644. Remember that permissions are usually counted in octal and that in Ruby octal numbers start with a zero, so 0644 != 644.
+    # [+root_dir+] The root path where image will be stored, it will be prepended to store_dir and tmp_dir
     # 
     # it also accepts the following, less common options:
     # [+web_root+] Prepended to all addresses returned by UploadColumn::UploadedFile.url
@@ -50,11 +66,13 @@ module UploadColumn
       
       # Add the accessor methods
       define_method name do
+        options = self.class.reflect_on_upload_columns[name].options #TODO: Spec this!
         @files ||= {}
         @files[name] ||= if self[name] then UploadedFile.retrieve(self[name], self, name, options) else nil end
       end
       
       define_method "#{name}=" do |file|
+        options = self.class.reflect_on_upload_columns[name].options
         @files ||= {}
         if file.nil?
           @files[name], self[name] = nil
@@ -72,12 +90,39 @@ module UploadColumn
       end
       
       define_method "#{name}_temp=" do |path|
+        options = self.class.reflect_on_upload_columns[name].options
         @files ||= {}
         return if path.nil? or path.empty?
         unless @files[name] and @files[name].new_file?
           @files[name] = UploadedFile.retrieve_temp(path, self, name, options)
           self[name] = @files[name].filename
         end
+      end
+    end
+    
+    def image_column(name, options={})
+      options = options.merge(
+        :manipulator => UploadColumn::Manipulators::RMagick,
+        :root_dir => File.join(RAILS_ROOT, 'public', 'images'),
+        :web_root => '/images',
+        :extensions => UploadColumn::IMAGE_EXTENSIONS
+      )
+      upload_column(name, options)
+    end
+    
+    # Validates whether the images extension is in the array passed to :extensions.
+    # By default this is the UploadColumn::EXTENSIONS array
+    # 
+    # Use this to prevent upload of files which could potentially damage your system,
+    # such as executables or script files (.rb, .php, etc...).
+    def validates_integrity_of(*attr_names)
+      configuration = { :message => "is not of a valid file type." }
+      configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)
+      
+      #attr_names.each { |name| self.reflect_on_upload_columns[name].options[:validate_integrity] = true }
+      
+      validates_each(attr_names, configuration) do |record, attr, column|
+        
       end
     end
     

@@ -169,6 +169,8 @@ If you want to only allow the upload of XHTML and XML files, so you can manipula
 
     upload_column :xml, :extensions => %w(xml html htm), :manipulator => MyXSLTProcessor
 
+	validate_integrity_of :xml
+
 You can also use some of Rails' validations with UploadColumn.
 
 validates_presence_of and validates_size_of have been verified to work. 
