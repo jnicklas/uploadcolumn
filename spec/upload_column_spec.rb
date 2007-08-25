@@ -211,7 +211,7 @@ describe "fetching a temp value" do
     
     UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
     
-    @temp_value = mock('temp_value')
+    @temp_value = '12345.1234.12345/somewhere.png'
     
     @uploaded_file.should_receive(:temp_value).and_return(@temp_value)
     @entry.avatar = @file
@@ -223,38 +223,46 @@ describe "fetching a temp value" do
   
 end
 
-describe "an UploadColumn with a new file" do
+describe "assigning a tempfile" do
   
   setup do
     setup_standard_mocking
-    
+  end
+  
+  it "should not override a new file" do
     UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
     @uploaded_file.stub!(:new_file?).and_return(true)
     @entry.avatar = @file
-  end
-  
-  it "should not be overriden by assiging a tempfile" do
     
-    temp_value = mock('temp value')
+    temp_value = '12345.1234.12345/somewhere.png'
+    
     UploadColumn::UploadedFile.should_not_receive(:retrieve_temp)
     @entry.avatar_temp = temp_value
     
     @entry.avatar.should == @uploaded_file
   end
-end
-
-describe "an UploadColumn with a file that is not new" do
-
-  setup do
-    setup_standard_mocking
-    
+  
+  it "should override a file that is not new" do
     UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
     @uploaded_file.stub!(:new_file?).and_return(false)
     @entry.avatar = @file
+    
+    temp_value = '12345.1234.12345/somewhere.png'
+    
+    retrieved_file = mock('a retrieved file')
+    retrieved_file.should_receive(:filename).and_return('walruss.png')
+    UploadColumn::UploadedFile.should_receive(:retrieve_temp).with(temp_value, @entry, :avatar, @options).and_return(retrieved_file)
+    @entry.should_receive(:[]=).with(:avatar, 'walruss.png')
+    
+    @entry.avatar_temp = temp_value
+    
+    @entry.avatar.should == retrieved_file
   end
   
-  it "should be overriden by a tempfile" do
-    temp_value = mock('temp value')
+  it "should set the file if there is none" do
+    
+    temp_value = '12345.1234.12345/somewhere.png'
+    
     retrieved_file = mock('a retrieved file')
     retrieved_file.should_receive(:filename).and_return('walruss.png')
     UploadColumn::UploadedFile.should_receive(:retrieve_temp).with(temp_value, @entry, :avatar, @options).and_return(retrieved_file)
@@ -267,29 +275,53 @@ describe "an UploadColumn with a file that is not new" do
   
 end
 
-describe "an UploadColumn with no file" do
-  
-  setup do
+describe "assigning nil to temp" do
+  before(:each) do
     setup_standard_mocking
   end
   
-  it "should assign a tempfile" do
+  it "should do nothing" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
+    @uploaded_file.stub!(:new_file?).and_return(false)
+    @entry.avatar = @file
     
-    temp_value = mock('temp value')
-    retrieved_file = mock('a retrieved file')
-    retrieved_file.should_receive(:filename).and_return('walruss.png')
-    UploadColumn::UploadedFile.should_receive(:retrieve_temp).with(temp_value, @entry, :avatar, @options).and_return(retrieved_file)
-    @entry.should_receive(:[]=).with(:avatar, 'walruss.png')
+    UploadColumn::UploadedFile.should_not_receive(:retrieve_temp)
+    @entry.should_not_receive(:[]=)
     
-    @entry.avatar_temp = temp_value
+    lambda {
+      @entry.avatar_temp = nil
+    }.should_not change(@entry, :avatar)
+  end
+end
+
+describe "assigning a blank string to temp" do
+  before(:each) do
+    setup_standard_mocking
+  end
+  
+  it "should do nothing" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
+    @uploaded_file.stub!(:new_file?).and_return(false)
+    @entry.avatar = @file
     
-    @entry.avatar.should == retrieved_file
+    UploadColumn::UploadedFile.should_not_receive(:retrieve_temp)
+    @entry.should_not_receive(:[]=)
+    
+    lambda {
+      @entry.avatar_temp = ""
+    }.should_not change(@entry, :avatar)
+  end
+end
+
+describe "an upload column with no file" do
+  
+  before(:each) do
+    setup_standard_mocking
   end
   
   it "should return no temp_value" do
     @entry.avatar_temp.should === nil
   end
-  
 end
 
 

@@ -40,9 +40,9 @@ module UploadColumn
     # [+root_path+] The root path where image will be stored, it will be prepended to store_dir and tmp_dir
     # 
     # it also accepts the following, less common options:
-    # [+web_root+] Prepended to all addresses returned by UploadColumn::BaseUploadedFile.url
+    # [+web_root+] Prepended to all addresses returned by UploadColumn::UploadedFile.url
     # [+extensions+] A white list of files that can be used together with validates_integrity_of to secure your uploads against malicious files.
-    # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, note that this does not give you any security, to make sure that no dangerous files are uploaded, use validates_integrity_of. This defaults to true.
+    # [+fix_file_extensions+] Try to fix the file's extension based on its mime-type, note that this does not give you any security, to make sure that no dangerous files are uploaded, use +validates_integrity_of+. This defaults to true.
     # [+get_content_type_from_file_exec+] If this is set to true, UploadColumn::SanitizedFile will use a *nix exec to try to figure out the content type of the uploaded file.
     def upload_column(name, options = {})
       @upload_columns ||= {}
@@ -73,6 +73,7 @@ module UploadColumn
       
       define_method "#{name}_temp=" do |path|
         @files ||= {}
+        return if path.nil? or path.empty?
         unless @files[name] and @files[name].new_file?
           @files[name] = UploadedFile.retrieve_temp(path, self, name, options)
           self[name] = @files[name].filename
