@@ -73,8 +73,8 @@ module UploadColumn
         
         unless empty?
           if options[:validate_integrity] 
-            raise IntegrityError.new("No list of valid extensions supplied.") unless options[:extensions]
-            raise IntegrityError.new("The extension is not included in the list.") unless options[:extensions].include?(extension)
+            raise UploadError.new("No list of valid extensions supplied.") unless options[:extensions]
+            raise IntegrityError.new("has an extension that is not allowed.") unless options[:extensions].include?(extension)
           end
 
           @temp_name = generate_tmpname

@@ -442,7 +442,9 @@ describe UploadColumn do
     
     it "should add an error to the record" do
       @event.image = stub_tempfile('kerb.jpg', nil, 'monkey.exe')
-      @event.errors.on(:image).should == ".exe is not in the list of allowed extensions."
+      @event.should_not be_valid
+      @event.errors.on(:image).should == "has an extension that is not allowed."
+      @event.image.should be_nil
     end
   end
   

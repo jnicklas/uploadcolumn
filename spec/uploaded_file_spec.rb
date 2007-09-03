@@ -1,11 +1,11 @@
 require File.join(File.dirname(__FILE__), 'spec_helper')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/upload_column')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/sanitized_file')
-require File.join(File.dirname(__FILE__), '../lib/upload_column/uploaded_file')
-begin
-  require 'mime/types'
-rescue LoadError
-end
+
+gem 'activerecord'
+require 'active_record'
+
+require File.join(File.dirname(__FILE__), '../lib/upload_column')
+
+ActiveRecord::Base.send(:include, UploadColumn)
 
 describe "UploadedFile" do
   
@@ -807,7 +807,7 @@ describe "UploadedFile" do
     it "should raise an error if no extensions are set" do
       lambda do
         @file = UploadColumn::UploadedFile.upload(stub_file('kerb.jpg'), nil, nil, :validate_integrity => true)
-      end.should raise_error(UploadColumn::IntegrityError)
+      end.should raise_error(UploadColumn::UploadError)
     end
 
     it "should not raise an error if the extension is in extensions" do

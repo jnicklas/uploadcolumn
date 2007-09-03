@@ -9,7 +9,7 @@ module UploadColumn
     base.after_save :save_uploaded_files
   end
   
-  EXTENSIONS = %w(asf avi css doc dvi gif gz html jpg js m3u mov mp3 mpeg odf pac pdf png ppt ps sig spl swf tar tar.gz torrent txt wav wax wm wma xbm xml xpm xsl xwd zip)
+  EXTENSIONS = %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip)
   IMAGE_EXTENSIONS = %w(jpg jpeg gif png)
   
   DEFAULTS = {
@@ -62,12 +62,13 @@ module UploadColumn
     # [+get_content_type_from_file_exec+] If this is set to true, UploadColumn::SanitizedFile will use a *nix exec to try to figure out the content type of the uploaded file.
     def upload_column(name, options = {})
       @upload_columns ||= {}
-      @upload_columns[name] = Column.new(name, options)
+      @upload_columns[name] = Column.new(name, options.reverse_merge(UploadColumn::DEFAULTS))
       
       # Add the accessor methods
       define_method name do
         options = self.class.reflect_on_upload_columns[name].options #TODO: Spec this!
         @files ||= {}
+        return nil if @files[name].is_a?(IntegrityError)
         @files[name] ||= if self[name] then UploadedFile.retrieve(self[name], self, name, options) else nil end
       end
       
@@ -77,16 +78,20 @@ module UploadColumn
         if file.nil?
           @files[name], self[name] = nil
         else
-          if uploaded_file = UploadedFile.upload(file, self, name, options)
-            self[name] = uploaded_file.filename
-            @files[name] = uploaded_file
+          begin
+            if uploaded_file = UploadedFile.upload(file, self, name, options)
+              self[name] = uploaded_file.filename
+              @files[name] = uploaded_file
+            end
+          rescue IntegrityError => e
+            @files[name] = e
           end
         end
       end
       
       # Add the accessor methods for temp
       define_method "#{name}_temp" do
-        @files[name].temp_value if @files and @files[name]
+        @files[name].temp_value if @files and @files[name].respond_to?(:temp_value)
       end
       
       define_method "#{name}_temp=" do |path|
@@ -119,10 +124,11 @@ module UploadColumn
       configuration = { :message => "is not of a valid file type." }
       configuration.update(attr_names.pop) if attr_names.last.is_a?(Hash)
       
-      #attr_names.each { |name| self.reflect_on_upload_columns[name].options[:validate_integrity] = true }
+      attr_names.each { |name| self.reflect_on_upload_columns[name].options[:validate_integrity] = true }
       
-      validates_each(attr_names, configuration) do |record, attr, column|
-        
+      validates_each(attr_names, configuration) do |record, attr, value|
+        value = record.instance_variable_get('@files')[attr]
+        record.errors.add(attr, value.message) if value.is_a?(IntegrityError)
       end
     end
     

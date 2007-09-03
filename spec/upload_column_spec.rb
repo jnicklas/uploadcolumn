@@ -13,7 +13,7 @@ def disconnected_model(model_class)
 end
 
 def setup_standard_mocking
-  @options = mock('options')
+  @options = mock('options', :null_object => true)
   Entry.upload_column :avatar, @options
   @entry = disconnected_model(Entry)
   
@@ -82,10 +82,12 @@ describe "declaring an upload_column" do
     Entry.reflect_on_upload_columns[:walruss].name.should == :walruss
   end
   
-  it "should save the options to be reflected upon" do
-    options = mock('options', :null_object => true)
+  it "should merge the options with the defaults and save them to be reflected upon" do
+    options = { :donkey => true }
+    
     Entry.upload_column(:walruss, options)
-    Entry.reflect_on_upload_columns[:walruss].options.should == options
+    
+    Entry.reflect_on_upload_columns[:walruss].options.should == options.merge(UploadColumn::DEFAULTS)
   end
 end
 
@@ -151,7 +153,7 @@ end
 
 describe "an upload_column with a value stored in the database and no uploaded_file" do
   before do
-    @options = mock('options')
+    @options = mock('options', :null_object => true)
     Entry.upload_column(:avatar, @options)
     
     @entry = disconnected_model(Entry)
@@ -323,7 +325,48 @@ describe "an upload column with no file" do
   end
 end
 
-describe "UploadColumn.image_column" do
+describe "uploading a file that fails an integrity check" do
+  
+  before(:all) do
+    Entry.validates_integrity_of :avatar
+  end
+  
+  before(:each) do
+    setup_standard_mocking
+  end
+  
+  it "should set the column to nil" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
+    @entry.avatar = @file
+    
+    @entry.avatar.should be_nil
+  end
+  
+  it "should fail an integrity validation" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
+    @entry.avatar = @file
+    
+    @entry.should_not be_valid
+    @entry.errors.on(:avatar).should == 'something'
+  end
+  
+  it "should be reversible by uploading a valid file" do
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
+    @entry.avatar = @file
+    
+    @entry.should_not be_valid
+    
+    @entry.errors.on(:avatar).should == 'something'
+    
+    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
+    @entry.avatar = @file
+    
+    @entry.should be_valid
+    @entry.errors.on(:avatar).should be_nil
+  end
+end
+
+describe UploadColumn::ClassMethods, ".image_column" do
   before(:each) do
     @class = Class.new(ActiveRecord::Base)
     @class.send(:include, UploadColumn)
@@ -338,5 +381,15 @@ describe "UploadColumn.image_column" do
       :extensions => UploadColumn::IMAGE_EXTENSIONS
     )
     @class.image_column(:sicada, :monkey => 'blah')
+  end
+end
+
+describe UploadColumn::ClassMethods, ".validate_integrity" do
+  
+  it "should change the options for this upload_column" do
+    Entry.upload_column :avatar
+    Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should == false
+    Entry.validates_integrity_of :avatar
+    Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should == true
   end
 end
