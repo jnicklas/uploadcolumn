@@ -34,6 +34,16 @@ class TestMigration < ActiveRecord::Migration
   end
 end
 
+class MagicColumnMigration < ActiveRecord::Migration
+  def self.up
+    add_column :events, :image_size, :integer
+    add_column :events, :image_url, :string
+    add_column :events, :image_path, :string
+    add_column :events, :image_monkey, :string
+    Event.reset_column_information
+  end
+end
+
 class Event < ActiveRecord::Base; end # setup a basic AR class for testing
 class Movie < ActiveRecord::Base; end # setup a basic AR class for testing
 
@@ -446,6 +456,147 @@ describe UploadColumn do
       @event.errors.on(:image).should == "has an extension that is not allowed."
       @event.image.should be_nil
     end
+    
+    it "should be reversible by uploading a valid file" do
+      
+      @event.image = stub_tempfile('kerb.jpg', nil, 'monkey.exe')
+
+      @event.should_not be_valid
+      @event.errors.on(:image).should include('has an extension that is not allowed.')
+
+      @event.image = stub_tempfile('kerb.jpg')
+
+      @event.should be_valid
+      @event.errors.on(:image).should be_nil
+    end
   end
+  
+  describe "uploading a file with magic columns" do
+    
+    migrate
+    
+    before(:all) do
+      MagicColumnMigration.up
+    end
+    
+    before(:each) do
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+    end
+    
+    it "should automatically set the image size" do
+      @event.image_size.should == @event.image.size    
+    end
+    
+    it "should automatically set the image path" do
+      @event.image_path.should == @event.image.path    
+    end
+    
+    it "should automatically set the image url" do
+      @event.image_url.should == @event.image.url    
+    end
+    
+    it "should ignore columns whose names aren't methods on the column" do
+      @event.image_monkey.should == nil
+    end
+  end
+  
+  describe "assigning a file from tmp with magic columns" do
+    
+    migrate
+    
+    before(:all) do
+      MagicColumnMigration.up
+    end
+    
+    before(:each) do
+      e1 = Event.new
+      e1.image = stub_tempfile('kerb.jpg')
+      @event = Event.new
+      @event.image_temp = e1.image_temp
+    end
+    
+    it "should automatically set the image size" do
+      @event.image_size.should == @event.image.size    
+    end
+    
+    it "should automatically set the image path" do
+      @event.image_path.should == @event.image.path    
+    end
+    
+    it "should automatically set the image url" do
+      @event.image_url.should == @event.image.url    
+    end
+    
+    it "should ignore columns whose names aren't methods on the column" do
+      @event.image_monkey.should == nil
+    end
+  end
+  
+  describe "uploading and saving a file with magic columns" do
+    
+    migrate
+    
+    before(:all) do
+      MagicColumnMigration.up
+    end
+    
+    before(:each) do
+      @event = Event.new
+      @event.image = stub_tempfile('kerb.jpg')
+      @event.save
+    end
+    
+    it "should automatically set the image size" do
+      @event.image_size.should == @event.image.size    
+    end
+    
+    it "should automatically set the image path" do
+      @event.image_path.should == @event.image.path    
+    end
+    
+    it "should automatically set the image url" do
+      @event.image_url.should == @event.image.url    
+    end
+    
+    it "should ignore columns whose names aren't methods on the column" do
+      @event.image_monkey.should == nil
+    end
+  end
+  
+  describe "assigning a file from tmp and saving it with magic columns" do
+    
+    migrate
+    
+    before(:all) do
+      MagicColumnMigration.up
+    end
+    
+    before(:each) do
+      e1 = Event.new
+      e1.image = stub_tempfile('kerb.jpg')
+      @event = Event.new
+      @event.image_temp = e1.image_temp
+      @event.save
+    end
+    
+    it "should automatically set the image size" do
+      @event.image_size.should == @event.image.size    
+    end
+    
+    it "should automatically set the image path" do
+      @event.image_path.should == @event.image.path    
+    end
+    
+    it "should automatically set the image url" do
+      @event.image_url.should == @event.image.url    
+    end
+    
+    it "should ignore columns whose names aren't methods on the column" do
+      @event.image_monkey.should == nil
+    end
+  end
+  
+  
   
 end

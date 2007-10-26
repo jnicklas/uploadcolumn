@@ -1,6 +1,5 @@
 require 'fileutils'
 require 'tempfile'
-require 'RMagick'
     
 module UploadColumn
   def self.append_features(base) #:nodoc:
@@ -35,6 +34,47 @@ module UploadColumn
   def save_uploaded_files
     @files.each { |k, v| v.send(:save) if v.tempfile? } if @files
   end
+  
+  def get_upload_column(name)
+    options = self.class.reflect_on_upload_columns[name].options #TODO: Spec this!
+    @files ||= {}
+    return nil if @files[name].is_a?(IntegrityError)
+    @files[name] ||= if self[name] then UploadedFile.retrieve(self[name], self, name, options) else nil end
+  end
+  
+  def set_upload_column(name, file)
+    options = self.class.reflect_on_upload_columns[name].options
+    @files ||= {}
+    if file.nil?
+      @files[name], self[name] = nil
+    else
+      begin
+        if uploaded_file = UploadedFile.upload(file, self, name, options)
+          self[name] = uploaded_file.filename
+          @files[name] = uploaded_file
+        end
+      rescue IntegrityError => e
+        @files[name] = e
+      end
+    end
+  end
+  
+  def get_upload_column_temp(name)
+    @files[name].temp_value if @files and @files[name].respond_to?(:temp_value)
+  end
+  
+  def set_upload_column_temp(name, path)
+    options = self.class.reflect_on_upload_columns[name].options
+    @files ||= {}
+    return if path.nil? or path.empty?
+    unless @files[name] and @files[name].new_file?
+      @files[name] = UploadedFile.retrieve_temp(path, self, name, options)
+      self[name] = @files[name].filename
+    end
+  end
+  
+  # weave in the magic column methods
+  include UploadColumn::MagicColumns
 
   module ClassMethods
     
@@ -64,44 +104,20 @@ module UploadColumn
       @upload_columns ||= {}
       @upload_columns[name] = Column.new(name, options.reverse_merge(UploadColumn::DEFAULTS))
       
-      # Add the accessor methods
       define_method name do
-        options = self.class.reflect_on_upload_columns[name].options #TODO: Spec this!
-        @files ||= {}
-        return nil if @files[name].is_a?(IntegrityError)
-        @files[name] ||= if self[name] then UploadedFile.retrieve(self[name], self, name, options) else nil end
+        get_upload_column(name)
       end
       
       define_method "#{name}=" do |file|
-        options = self.class.reflect_on_upload_columns[name].options
-        @files ||= {}
-        if file.nil?
-          @files[name], self[name] = nil
-        else
-          begin
-            if uploaded_file = UploadedFile.upload(file, self, name, options)
-              self[name] = uploaded_file.filename
-              @files[name] = uploaded_file
-            end
-          rescue IntegrityError => e
-            @files[name] = e
-          end
-        end
+        set_upload_column(name, file)
       end
       
-      # Add the accessor methods for temp
       define_method "#{name}_temp" do
-        @files[name].temp_value if @files and @files[name].respond_to?(:temp_value)
+        get_upload_column_temp(name)
       end
       
       define_method "#{name}_temp=" do |path|
-        options = self.class.reflect_on_upload_columns[name].options
-        @files ||= {}
-        return if path.nil? or path.empty?
-        unless @files[name] and @files[name].new_file?
-          @files[name] = UploadedFile.retrieve_temp(path, self, name, options)
-          self[name] = @files[name].filename
-        end
+        set_upload_column_temp(name, path)
       end
     end
     

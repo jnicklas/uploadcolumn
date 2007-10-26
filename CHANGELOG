@@ -2,9 +2,9 @@
 
 [NEW] Complete rewrite, maintaining most of the legacy API
 
-[NEW] Support for a whole range of custom manipulators
+[NEW] Framework for custom manipulators, for clean and easy extension.
 
-[NEW*] Manipulate images with ImageScience instead of RMagick if you want
+[NEW] Manipulate images with ImageScience instead of RMagick if you want
 
 [NEW] Support for animated GIFs in the RMagick manipulator
 
@@ -14,11 +14,13 @@
 
 [NEW*] Integrated mocking support, to make testing your UploadColumns easier.
 
+[NEW*] Following the law of Demeter better by adding _url, _thumb, _thumb_url etc... magic methods.
+
 [CHANGED*] Store dir and temp dir procs now take two piped variables, the UploadedFile object and the ActiveRecord
 
 [CHANGED] the :root_path option is now called :root_dir
 
-[CHANGED] web_root must now be set with a leading slash if an abolute URL is desired and no trailing slash.
+[CHANGED] web_root must now be set with a leading slash if an absolute URL is desired and no trailing slash.
 
 [CHANGED] UploadedFile#filename_base is removed in favor of #basename
 
@@ -27,6 +29,8 @@
 [CHANGED] UploadedFile#mime_type is removed in favor of #content_type
 
 [DEPRECATED] _store_dir and _tmp_dir callbacks are deprecated
+
+[REMOVED] Support for the exif columns, as in 0.2.X has been removed temporarily. It might be readded later.
 
 ============================
 

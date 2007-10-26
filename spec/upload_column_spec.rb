@@ -7,25 +7,11 @@ require File.join(File.dirname(__FILE__), '../lib/upload_column')
 
 ActiveRecord::Base.send(:include, UploadColumn)
 
-def disconnected_model(model_class)
-  model_class.stub!(:columns).and_return([])
-  return model_class.new
-end
-
-def setup_standard_mocking
-  @options = mock('options', :null_object => true)
-  Entry.upload_column :avatar, @options
-  @entry = disconnected_model(Entry)
-  
-  @file = mock('file')
-  
-  @uploaded_file = mock('uploaded_file')
-  @uploaded_file.stub!(:filename).and_return('monkey.png')
-end
-
 class Entry < ActiveRecord::Base; end # setup a basic AR class for testing
 
 describe "an ActiveRecord class" do
+  
+  include UploadColumnSpecHelper
   
   it "should respond to upload_column" do
     Entry.should respond_to(:upload_column)
@@ -58,6 +44,8 @@ describe "an ActiveRecord class" do
 end
 
 describe "declaring an upload_column" do
+  
+  include UploadColumnSpecHelper
   
   it "should add accessor methods" do
     # use a name that hasn't been used before! 
@@ -93,6 +81,8 @@ end
 
 describe "uploading a file" do
   
+  include UploadColumnSpecHelper
+  
   before do
     setup_standard_mocking
     UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
@@ -112,6 +102,8 @@ describe "uploading a file" do
 end
 
 describe "uploading an empty String" do
+  
+  include UploadColumnSpecHelper
   
   before do
     setup_standard_mocking
@@ -137,6 +129,9 @@ describe "uploading an empty String" do
 end
 
 describe "setting nil explicitly" do
+  
+  include UploadColumnSpecHelper
+  
   before do
     setup_standard_mocking
   end
@@ -152,6 +147,9 @@ describe "setting nil explicitly" do
 end
 
 describe "an upload_column with a value stored in the database and no uploaded_file" do
+  
+  include UploadColumnSpecHelper
+  
   before do
     @options = mock('options', :null_object => true)
     Entry.upload_column(:avatar, @options)
@@ -172,6 +170,8 @@ describe "an upload_column with a value stored in the database and no uploaded_f
 end
 
 describe "saving uploaded files" do
+  
+  include UploadColumnSpecHelper
   
   before do
     setup_standard_mocking
@@ -207,6 +207,8 @@ end
 
 describe "fetching a temp value" do
   
+  include UploadColumnSpecHelper
+  
   setup do
     setup_standard_mocking
     
@@ -225,6 +227,8 @@ describe "fetching a temp value" do
 end
 
 describe "assigning a tempfile" do
+  
+  include UploadColumnSpecHelper
   
   setup do
     setup_standard_mocking
@@ -277,6 +281,9 @@ describe "assigning a tempfile" do
 end
 
 describe "assigning nil to temp" do
+  
+  include UploadColumnSpecHelper
+  
   before(:each) do
     setup_standard_mocking
   end
@@ -296,6 +303,9 @@ describe "assigning nil to temp" do
 end
 
 describe "assigning a blank string to temp" do
+  
+  include UploadColumnSpecHelper
+  
   before(:each) do
     setup_standard_mocking
   end
@@ -316,6 +326,8 @@ end
 
 describe "an upload column with no file" do
   
+  include UploadColumnSpecHelper
+  
   before(:each) do
     setup_standard_mocking
   end
@@ -326,6 +338,8 @@ describe "an upload column with no file" do
 end
 
 describe "uploading a file that fails an integrity check" do
+  
+  include UploadColumnSpecHelper
   
   before(:all) do
     Entry.validates_integrity_of :avatar
@@ -349,24 +363,12 @@ describe "uploading a file that fails an integrity check" do
     @entry.should_not be_valid
     @entry.errors.on(:avatar).should == 'something'
   end
-  
-  it "should be reversible by uploading a valid file" do
-    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
-    @entry.avatar = @file
-    
-    @entry.should_not be_valid
-    
-    @entry.errors.on(:avatar).should == 'something'
-    
-    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
-    @entry.avatar = @file
-    
-    @entry.should be_valid
-    @entry.errors.on(:avatar).should be_nil
-  end
 end
 
 describe UploadColumn::ClassMethods, ".image_column" do
+  
+  include UploadColumnSpecHelper
+  
   before(:each) do
     @class = Class.new(ActiveRecord::Base)
     @class.send(:include, UploadColumn)
@@ -385,6 +387,8 @@ describe UploadColumn::ClassMethods, ".image_column" do
 end
 
 describe UploadColumn::ClassMethods, ".validate_integrity" do
+  
+  include UploadColumnSpecHelper
   
   it "should change the options for this upload_column" do
     Entry.upload_column :avatar

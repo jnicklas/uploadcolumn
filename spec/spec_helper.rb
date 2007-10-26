@@ -45,3 +45,22 @@ def stub_file(filename, mime_type=nil, fake_name=nil)
   f.stub!(:original_filename).and_return(fake_name) if fake_name
   return f
 end
+
+module UploadColumnSpecHelper
+  
+  def disconnected_model(model_class)
+    model_class.stub!(:columns).and_return([])
+    return model_class.new
+  end
+  
+  def setup_standard_mocking
+    @options = mock('options', :null_object => true)
+    Entry.upload_column :avatar, @options
+    @entry = disconnected_model(Entry)
+
+    @file = mock('file')
+
+    @uploaded_file = mock('uploaded_file')
+    @uploaded_file.stub!(:filename).and_return('monkey.png')
+  end
+end
