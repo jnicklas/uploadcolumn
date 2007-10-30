@@ -234,7 +234,7 @@ module UploadColumn
     
     def parse_dir_options(option)
       if self.instance.respond_to?("#{self.attribute}_#{option}")
-        self.instance.send("#{self.attribute}_#{option}")
+        self.instance.send("#{self.attribute}_#{option}", self)
       else
         option = @options[option]
         if option.is_a?(Proc)

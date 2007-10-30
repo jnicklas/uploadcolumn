@@ -272,8 +272,8 @@ describe "UploadedFile" do
   describe "an UploadedFile with a store_dir callback" do
     before do
       i = mock('instance with store_dir callback')
-      i.should_receive(:monkey_store_dir).and_return('llama')
       @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), i, :monkey)
+      i.should_receive(:monkey_store_dir).with(@file).and_return('llama')
     end
     
     it "should have the correct relative store dir" do
@@ -288,8 +288,8 @@ describe "UploadedFile" do
   describe "an UploadedFile with a tmp_dir callback" do
     before do
       i = mock('instance with a tmp_dir callback')
-      i.should_receive(:monkey_tmp_dir).and_return('gorilla')
       @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), i, :monkey)
+      i.should_receive(:monkey_tmp_dir).with(@file).and_return('gorilla')
     end
     
     it "should have the correct relative tmp dir" do
