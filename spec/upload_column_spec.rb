@@ -70,12 +70,12 @@ describe "declaring an upload_column" do
     Entry.reflect_on_upload_columns[:walruss].name.should == :walruss
   end
   
-  it "should merge the options with the defaults and save them to be reflected upon" do
+  it "should save the options to be reflected upon" do
     options = { :donkey => true }
     
     Entry.upload_column(:walruss, options)
     
-    Entry.reflect_on_upload_columns[:walruss].options.should == options.merge(UploadColumn::DEFAULTS)
+    Entry.reflect_on_upload_columns[:walruss].options.should == options
   end
 end
 
@@ -332,9 +332,109 @@ describe "an upload column with no file" do
     setup_standard_mocking
   end
   
-  it "should return no temp_value" do
-    @entry.avatar_temp.should === nil
+  it "should return no value" do
+    @entry.avatar.should be_nil
   end
+  
+  it "should return no temp_value" do
+    @entry.avatar_temp.should be_nil
+  end
+  
+  it "should return nothing in the _url method" do
+    @entry.avatar_url.should == nil
+  end
+  
+  it "should return nothing in the _path method" do
+    @entry.avatar_path.should == nil
+  end
+end
+
+describe "an upload column with an uploaded file" do
+
+  include UploadColumnSpecHelper
+
+  before(:each) do
+    setup_standard_mocking
+    UploadColumn::UploadedFile.stub!(:upload).and_return(@uploaded_file)
+    @entry.avatar = @file
+  end
+  
+  it "should delegate the _url method to the column" do
+    @uploaded_file.should_receive(:url).and_return('/url/to/file.exe')
+    @entry.avatar_url.should == '/url/to/file.exe'
+  end
+  
+  it "should delegate the _path method to the column" do
+    @uploaded_file.should_receive(:path).and_return('/path/to/file.exe')
+    @entry.avatar_path.should == '/path/to/file.exe'
+  end
+  
+end
+
+describe "an upload column with different versions and no uploaded file" do
+
+  include UploadColumnSpecHelper
+
+  before(:each) do
+    setup_version_mocking # sets up a column with thumb and large versions
+  end
+  
+  it "should return nil for the _thumb method" do
+    @entry.avatar_thumb.should == nil
+  end
+  
+  it "should return nil for the _large method" do
+    @entry.avatar_large.should == nil
+  end
+  
+  it "should return nil for the _thumb_url method" do
+    @entry.avatar_thumb_url.should == nil
+  end
+  
+  it "should return nil for the _large_path method" do
+    @entry.avatar_large_path.should == nil
+  end
+    
+end
+
+describe "an upload column with different versions and an uploaded file" do
+
+  include UploadColumnSpecHelper
+
+  before(:each) do
+    setup_version_mocking # sets up a column with thumb and large versions
+    UploadColumn::UploadedFile.stub!(:upload).and_return(@uploaded_file)
+    @entry.avatar = @file
+  end
+  
+  it "should delegate the _thumb method to the column" do
+    thumb = mock('thumb')
+    @uploaded_file.should_receive(:thumb).and_return(thumb)
+    @entry.avatar_thumb.should == thumb
+  end
+  
+  it "should delegate the _large method to the column" do
+    large = mock('large')
+    @uploaded_file.should_receive(:large).and_return(large)
+    @entry.avatar_large.should == large
+  end
+  
+  it "should delegate the _thumb_url method to the column" do
+    thumb = mock('thumb')
+    thumb.should_receive(:url).and_return('/url/to/file.exe')
+    @uploaded_file.should_receive(:thumb).and_return(thumb)
+    
+    @entry.avatar_thumb_url.should == '/url/to/file.exe'
+  end
+  
+  it "should delegate the _large_path method to the column" do
+    large = mock('large')
+    large.should_receive(:path).and_return('/path/to/file.exe')
+    @uploaded_file.should_receive(:large).and_return(large)
+    
+    @entry.avatar_large_path.should == '/path/to/file.exe'
+  end
+    
 end
 
 describe "uploading a file that fails an integrity check" do
@@ -380,7 +480,7 @@ describe UploadColumn::ClassMethods, ".image_column" do
       :root_dir => File.join(RAILS_ROOT, 'public', 'images'),
       :web_root => '/images',
       :monkey => 'blah',
-      :extensions => UploadColumn::IMAGE_EXTENSIONS
+      :extensions => UploadColumn.image_extensions
     )
     @class.image_column(:sicada, :monkey => 'blah')
   end
@@ -392,8 +492,67 @@ describe UploadColumn::ClassMethods, ".validate_integrity" do
   
   it "should change the options for this upload_column" do
     Entry.upload_column :avatar
-    Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should == false
+    Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should be_nil
     Entry.validates_integrity_of :avatar
     Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should == true
+  end
+end
+
+describe "UploadColumn" do
+  
+  it "should have a default configuration" do
+    UploadColumn.configuration.should be_an_instance_of(Hash)
+    config = UploadColumn.configuration
+    
+    config[:tmp_dir].should == 'tmp'
+    config[:store_dir].should be_an_instance_of(Proc)
+    config[:root_dir].should == File.join(RAILS_ROOT, 'public')
+    config[:get_content_type_from_file_exec].should == true
+    config[:fix_file_extensions].should == false
+    config[:process].should == nil
+    config[:permissions].should == 0644
+    config[:extensions].should == UploadColumn.extensions
+    config[:web_root].should == ''
+    config[:manipulator].should == nil
+    config[:versions].should == nil
+    config[:validate_integrity].should == false
+  end
+  
+  it "should have a list of allowed extensions" do
+    UploadColumn.extensions.should == %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip)
+  end
+  
+  it "should have a list of allowed image extensions" do
+    UploadColumn.image_extensions.should == %w(jpg jpeg gif png)
+  end
+  
+end
+
+describe "UploadColumn.configure" do
+  
+  after do
+    UploadColumn.reset_configuration
+  end
+  
+  it "should yield a configuration proxy" do
+    UploadColumn.configure do |config|
+      config.should be_an_instance_of(UploadColumn::ConfigurationProxy)
+    end
+  end
+  
+  it "should change the configuration of a known option" do
+    UploadColumn.configure do |config|
+      config.web_root = "/monkey"
+    end
+    
+    UploadColumn.configuration[:web_root].should == "/monkey"
+  end
+  
+  it "should change the configuration of an unknown option" do
+    UploadColumn.configure do |config|
+      config.monkey = ":)"
+    end
+    
+    UploadColumn.configuration[:monkey].should == ":)"
   end
 end

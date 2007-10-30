@@ -57,7 +57,9 @@ module UploadColumn
     end
     
     def initialize(mode, file, instance, attribute, options={})
-      @options = options.reverse_merge(UploadColumn::DEFAULTS)
+      # TODO: the options are always reverse merged in here, in case UploadedFile has
+      # been initialized outside UploadColumn proper, this is not a very elegant solution, imho.
+      @options = options.reverse_merge(UploadColumn.configuration)
       @instance = instance
       @attribute = attribute
       

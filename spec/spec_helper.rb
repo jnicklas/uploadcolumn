@@ -57,10 +57,21 @@ module UploadColumnSpecHelper
     @options = mock('options', :null_object => true)
     Entry.upload_column :avatar, @options
     @entry = disconnected_model(Entry)
-
+    mock_file
+  end
+  
+  def setup_version_mocking
+    Entry.upload_column :avatar, :versions => [ :thumb, :large ]
+    @entry = disconnected_model(Entry)
+    mock_file
+  end
+  
+  private
+    
+  def mock_file
     @file = mock('file')
 
     @uploaded_file = mock('uploaded_file')
-    @uploaded_file.stub!(:filename).and_return('monkey.png')
+    @uploaded_file.stub!(:filename).and_return('monkey.png')    
   end
 end

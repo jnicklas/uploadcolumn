@@ -8,25 +8,6 @@ module UploadColumn
     base.after_save :save_uploaded_files
   end
   
-  EXTENSIONS = %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip)
-  IMAGE_EXTENSIONS = %w(jpg jpeg gif png)
-  
-  DEFAULTS = {
-    :tmp_dir => 'tmp',
-    :store_dir => proc{ |r, f| f.attribute.to_s },
-    :root_dir => File.join(RAILS_ROOT, 'public'),
-    :get_content_type_from_file_exec => true,
-    :fix_file_extensions => false,
-    :web_root => nil,
-    :process => nil,
-    :permissions => 0644,
-    :extensions => UploadColumn::EXTENSIONS,
-    :web_root => '',
-    :manipulator => nil,
-    :versions => nil,
-    :validate_integrity => false
-  }
-  
   Column = Struct.new(:name, :options)
   
   private
@@ -36,14 +17,14 @@ module UploadColumn
   end
   
   def get_upload_column(name)
-    options = self.class.reflect_on_upload_columns[name].options #TODO: Spec this!
+    options = options_for_column(name) #TODO: Spec this!
     @files ||= {}
     return nil if @files[name].is_a?(IntegrityError)
     @files[name] ||= if self[name] then UploadedFile.retrieve(self[name], self, name, options) else nil end
   end
   
   def set_upload_column(name, file)
-    options = self.class.reflect_on_upload_columns[name].options
+    options = options_for_column(name)
     @files ||= {}
     if file.nil?
       @files[name], self[name] = nil
@@ -64,13 +45,17 @@ module UploadColumn
   end
   
   def set_upload_column_temp(name, path)
-    options = self.class.reflect_on_upload_columns[name].options
+    options = options_for_column(name)
     @files ||= {}
     return if path.nil? or path.empty?
     unless @files[name] and @files[name].new_file?
       @files[name] = UploadedFile.retrieve_temp(path, self, name, options)
       self[name] = @files[name].filename
     end
+  end
+  
+  def options_for_column(name)
+    return self.class.reflect_on_upload_columns[name].options.reverse_merge(UploadColumn.configuration)
   end
   
   # weave in the magic column methods
@@ -102,8 +87,9 @@ module UploadColumn
     # [+get_content_type_from_file_exec+] If this is set to true, UploadColumn::SanitizedFile will use a *nix exec to try to figure out the content type of the uploaded file.
     def upload_column(name, options = {})
       @upload_columns ||= {}
-      @upload_columns[name] = Column.new(name, options.reverse_merge(UploadColumn::DEFAULTS))
+      @upload_columns[name] = Column.new(name, options)
       
+      # TODO: this method is not very pretty and could definitely use some refactoring :(
       define_method name do
         get_upload_column(name)
       end
@@ -119,16 +105,39 @@ module UploadColumn
       define_method "#{name}_temp=" do |path|
         set_upload_column_temp(name, path)
       end
+      
+      define_method "#{name}_url" do
+        file = get_upload_column(name)
+        file.url if file
+      end
+      
+      define_method "#{name}_path" do
+        file = get_upload_column(name)
+        file.path if file
+      end
+      
+      if options[:versions]
+        options[:versions].each do |k,v|
+          define_method "#{name}_#{k}" do
+            file = get_upload_column(name)
+            file.send(k) if file
+          end
+          
+          define_method "#{name}_#{k}_url" do
+            file = get_upload_column(name)
+            file.send(k).url if file
+          end
+          
+          define_method "#{name}_#{k}_path" do
+            file = get_upload_column(name)
+            file.send(k).path if file
+          end
+        end
+      end
     end
     
     def image_column(name, options={})
-      options = options.merge(
-        :manipulator => UploadColumn::Manipulators::RMagick,
-        :root_dir => File.join(RAILS_ROOT, 'public', 'images'),
-        :web_root => '/images',
-        :extensions => UploadColumn::IMAGE_EXTENSIONS
-      )
-      upload_column(name, options)
+      upload_column(name, options.reverse_merge(UploadColumn.image_column_configuration))
     end
     
     # Validates whether the images extension is in the array passed to :extensions.
