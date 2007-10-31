@@ -60,6 +60,7 @@ describe "normally instantiating and saving a record" do
   migrate
   
   it "shouldn't fail" do
+    Event.reflect_on_upload_columns.should == {}
     running { @event = Event.new }.should_not raise_error
     @event.image = "monkey"
     running { @event.save }.should_not raise_error

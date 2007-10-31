@@ -13,7 +13,7 @@ module UploadColumn
   private
   
   def save_uploaded_files
-    @files.each { |k, v| v.send(:save) if v.tempfile? } if @files
+    @files.each { |k, v| v.send(:save) if v and v.tempfile? } if @files
   end
   
   def get_upload_column(name)
