@@ -43,7 +43,7 @@ describe "an ActiveRecord class" do
   
 end
 
-describe "declaring an upload_column" do
+describe "an Active Record class with an upload_column" do
   
   include UploadColumnSpecHelper
   
@@ -65,7 +65,7 @@ describe "declaring an upload_column" do
     entry.should respond_to(:llama_temp=)
   end
   
-  it "should save the name to be reflected upon" do
+  it "should save the name of the column to be reflected upon" do
     Entry.upload_column(:walruss)
     Entry.reflect_on_upload_columns[:walruss].name.should == :walruss
   end

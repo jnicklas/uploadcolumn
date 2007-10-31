@@ -75,3 +75,15 @@ module UploadColumnSpecHelper
     @uploaded_file.stub!(:filename).and_return('monkey.png')    
   end
 end
+
+module UniversalSpecHelper
+  
+  def running(&block)
+    lambda(&block)
+  end
+  
+end
+
+Spec::Runner.configure do |config|
+  config.include UniversalSpecHelper
+end
