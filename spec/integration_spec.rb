@@ -52,6 +52,21 @@ def migrate
   after(:all) { TestMigration.down }
 end
 
+# TODO: RSpec syntax and integration really don't mix. In the long run, it would
+# be nice to rewrite this stuff with the Story runner.
+
+describe "normally instantiating and saving a record" do
+  
+  migrate
+  
+  it "shouldn't fail" do
+    running { @event = Event.new }.should_not raise_error
+    @event.image = "monkey"
+    running { @event.save }.should_not raise_error
+  end
+  
+end
+
 describe "uploading a single file" do
   
   migrate

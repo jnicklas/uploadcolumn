@@ -159,7 +159,7 @@ module UploadColumn
     
     # returns a hash of all UploadColumns defined on the model and their options.
     def reflect_on_upload_columns
-      @upload_columns
+      @upload_columns || {}
     end
     
     private

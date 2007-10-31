@@ -28,7 +28,7 @@
 
 [CHANGED] UploadedFile#mime_type is removed in favor of #content_type
 
-[DEPRECATED] _store_dir and _tmp_dir callbacks are deprecated
+[CHANGED] _store_dir and _tmp_dir callbacks now take the file object as an argument, which means that the methods always MUST take an argument, even if you don't need it.
 
 [REMOVED] Support for the exif columns, as in 0.2.X has been removed temporarily. It might be readded later.
 

@@ -79,6 +79,23 @@ describe "an Active Record class with an upload_column" do
   end
 end
 
+describe "an Active Record with no upload_column" do
+  
+  before(:all) do
+    class Monkey < ActiveRecord::Base; end
+  end
+  
+  it "should have no uploads_column" do
+    Monkey.reflect_on_upload_columns.should == {}
+  end
+  
+  it "should be instantiable" do
+    Monkey.stub!(:columns).and_return([])
+    Monkey.new
+  end
+  
+end
+
 describe "uploading a file" do
   
   include UploadColumnSpecHelper
