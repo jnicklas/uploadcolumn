@@ -342,6 +342,10 @@ describe "an upload_column with an uploaded file" do
     @e2[:image].should == "skanthak.png"
   end
   
+  it "should be marshallable" do
+    running { Marshal.dump(@entry) }.should_not raise_error
+  end
+  
   after do
     FileUtils.rm_rf(PUBLIC)
   end

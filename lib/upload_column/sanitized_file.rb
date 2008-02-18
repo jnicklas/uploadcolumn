@@ -1,5 +1,7 @@
 begin; require 'mime/types'; rescue Exception; end
 
+require 'fileutils'
+
 module UploadColumn
   # Sanitize is a base class that takes care of all the dirtywork when dealing with file uploads.
   # it is subclassed as UploadedFile in UploadColumn, which does most of the upload magic, but if

@@ -30,7 +30,7 @@ module UploadColumn
     def evaluate_magic_columns_for_upload_column(name)
       self.class.column_names.each do |column_name|
         if predicate = column_name.scan(/^#{name}_([a-z0-9_?!]+)$/).first
-          predicate = predicate.first # why does scanf not work?
+          predicate = predicate.first
           self.instance_eval <<-SRC
             self.#{column_name} = self.#{name}.#{predicate} if self.#{name}.respond_to?(:#{predicate})
           SRC

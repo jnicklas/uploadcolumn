@@ -20,7 +20,7 @@ module UploadColumn
     :validate_integrity => false
   }
   
-  self.configuration = UploadColumn::DEFAULT_CONFIGURATION.dup
+  self.configuration = UploadColumn::DEFAULT_CONFIGURATION.clone
   self.image_column_configuration = {
     :manipulator => UploadColumn::Manipulators::RMagick,
     :root_dir => File.join(RAILS_ROOT, 'public', 'images'),
@@ -33,7 +33,7 @@ module UploadColumn
   end
   
   def self.reset_configuration
-    self.configuration = UploadColumn::DEFAULT_CONFIGURATION
+    self.configuration = UploadColumn::DEFAULT_CONFIGURATION.clone
   end
   
   class ConfigurationProxy  

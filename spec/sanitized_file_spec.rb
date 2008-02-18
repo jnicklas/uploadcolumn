@@ -140,7 +140,8 @@ end
 
 describe "a sanitized Tempfile" do
   before do
-    @file = UploadColumn::SanitizedFile.new(stub_tempfile('kerb.jpg', 'image/jpeg'))
+    @tempfile = stub_tempfile('kerb.jpg', 'image/jpeg')
+    @file = UploadColumn::SanitizedFile.new(@tempfile)
   end
 
   it_should_behave_like "all sanitized files"
@@ -151,7 +152,7 @@ describe "a sanitized Tempfile" do
 
   it "should return the correct path" do
     @file.path.should_not == nil
-    @file.path.should =~ %r{^/tmp/kerb.jpg}
+    @file.path.should == @tempfile.path
   end
 end
 
@@ -351,26 +352,10 @@ describe "a SanitizedFile with a wrong extension" do
   it "should not fix extention if fix_file_extensions is false" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', 'image/jpeg', 'kerb.css'), :fix_file_extensions => false)
     
-    t.content_type.should == "image/jpeg"
+    #t.content_type.should == "image/css" FIXME: the result of this is upredictable and
+    # differs, depending on whether or not the user has MIME::Types installed
     t.extension.should == "css"
     t.filename.should == "kerb.css"
-  end
-end
-
-describe "a sanitized Tempfile" do
-  before do
-    @file = UploadColumn::SanitizedFile.new(stub_tempfile('kerb.jpg', 'image/jpeg'))
-  end
-
-  it_should_behave_like "all sanitized files"
-  
-  it "should exist" do
-    @file.should be_in_existence
-  end
-
-  it "should return the correct path" do
-    @file.path.should_not == nil
-    @file.path.should =~ %r{^/tmp/kerb.jpg}
   end
 end
 

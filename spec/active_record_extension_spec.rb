@@ -5,8 +5,6 @@ require 'active_record'
 
 require File.join(File.dirname(__FILE__), '../lib/upload_column')
 
-ActiveRecord::Base.send(:include, UploadColumn)
-
 class Entry < ActiveRecord::Base; end # setup a basic AR class for testing
 
 describe "an ActiveRecord class" do
@@ -306,7 +304,7 @@ describe "assigning nil to temp" do
   end
   
   it "should do nothing" do
-    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_return(@uploaded_file)
+    UploadColumn::UploadedFile.stub!(:upload).and_return(@uploaded_file)
     @uploaded_file.stub!(:new_file?).and_return(false)
     @entry.avatar = @file
     
@@ -467,14 +465,14 @@ describe "uploading a file that fails an integrity check" do
   end
   
   it "should set the column to nil" do
-    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
+    UploadColumn::UploadedFile.should_receive(:upload).and_raise(UploadColumn::IntegrityError.new('something'))
     @entry.avatar = @file
     
     @entry.avatar.should be_nil
   end
   
   it "should fail an integrity validation" do
-    UploadColumn::UploadedFile.should_receive(:upload).with(@file, @entry, :avatar, @options).and_raise(UploadColumn::IntegrityError.new('something'))
+    UploadColumn::UploadedFile.should_receive(:upload).and_raise(UploadColumn::IntegrityError.new('something'))
     @entry.avatar = @file
     
     @entry.should_not be_valid
@@ -482,7 +480,7 @@ describe "uploading a file that fails an integrity check" do
   end
 end
 
-describe UploadColumn::ClassMethods, ".image_column" do
+describe UploadColumn::ActiveRecordExtension::ClassMethods, ".image_column" do
   
   include UploadColumnSpecHelper
   
@@ -503,7 +501,7 @@ describe UploadColumn::ClassMethods, ".image_column" do
   end
 end
 
-describe UploadColumn::ClassMethods, ".validate_integrity" do
+describe UploadColumn::ActiveRecordExtension::ClassMethods, ".validate_integrity" do
   
   include UploadColumnSpecHelper
   
@@ -512,64 +510,5 @@ describe UploadColumn::ClassMethods, ".validate_integrity" do
     Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should be_nil
     Entry.validates_integrity_of :avatar
     Entry.reflect_on_upload_columns[:avatar].options[:validate_integrity].should == true
-  end
-end
-
-describe "UploadColumn" do
-  
-  it "should have a default configuration" do
-    UploadColumn.configuration.should be_an_instance_of(Hash)
-    config = UploadColumn.configuration
-    
-    config[:tmp_dir].should == 'tmp'
-    config[:store_dir].should be_an_instance_of(Proc)
-    config[:root_dir].should == File.join(RAILS_ROOT, 'public')
-    config[:get_content_type_from_file_exec].should == true
-    config[:fix_file_extensions].should == false
-    config[:process].should == nil
-    config[:permissions].should == 0644
-    config[:extensions].should == UploadColumn.extensions
-    config[:web_root].should == ''
-    config[:manipulator].should == nil
-    config[:versions].should == nil
-    config[:validate_integrity].should == false
-  end
-  
-  it "should have a list of allowed extensions" do
-    UploadColumn.extensions.should == %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip)
-  end
-  
-  it "should have a list of allowed image extensions" do
-    UploadColumn.image_extensions.should == %w(jpg jpeg gif png)
-  end
-  
-end
-
-describe "UploadColumn.configure" do
-  
-  after do
-    UploadColumn.reset_configuration
-  end
-  
-  it "should yield a configuration proxy" do
-    UploadColumn.configure do |config|
-      config.should be_an_instance_of(UploadColumn::ConfigurationProxy)
-    end
-  end
-  
-  it "should change the configuration of a known option" do
-    UploadColumn.configure do |config|
-      config.web_root = "/monkey"
-    end
-    
-    UploadColumn.configuration[:web_root].should == "/monkey"
-  end
-  
-  it "should change the configuration of an unknown option" do
-    UploadColumn.configure do |config|
-      config.monkey = ":)"
-    end
-    
-    UploadColumn.configuration[:monkey].should == ":)"
   end
 end

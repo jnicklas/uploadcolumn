@@ -1,5 +1,11 @@
 0.3
 
+Note: The 0.3 branch is a complete rewrite of everything, with a similar (but not identical) API, don't expect it to work drop-in.
+
+[TODO] You can now set a default image if the column is blank
+
+[TODO] Integrated mocking support, to make testing your UploadColumns easier.
+
 [NEW] Complete rewrite, maintaining most of the legacy API
 
 [NEW] Framework for custom manipulators, for clean and easy extension.
@@ -10,13 +16,9 @@
 
 [NEW] Fully tested with RSpec
 
-[NEW*] You can now set a default image if the column is blank
+[NEW] Following the law of Demeter better by adding _url, _thumb, _thumb_url etc... magic methods.
 
-[NEW*] Integrated mocking support, to make testing your UploadColumns easier.
-
-[NEW*] Following the law of Demeter better by adding _url, _thumb, _thumb_url etc... magic methods.
-
-[CHANGED*] Store dir and temp dir procs now take two piped variables, the UploadedFile object and the ActiveRecord
+[CHANGED] Store dir and temp dir procs now take two piped variables, the UploadedFile object and the ActiveRecord
 
 [CHANGED] the :root_path option is now called :root_dir
 
@@ -31,6 +33,12 @@
 [CHANGED] _store_dir and _tmp_dir callbacks now take the file object as an argument, which means that the methods always MUST take an argument, even if you don't need it.
 
 [REMOVED] Support for the exif columns, as in 0.2.X has been removed temporarily. It might be readded later.
+
+[REMOVED] The old_files option as in 0.2.X has been removed. All old files are now stored. This option will be reintroduced in later versions of 0.3.X
+
+[REMOVED] The :force_format option for image_columns as in 0.2.X has been removed and will be reintroduced later.
+
+[REMOVED] The remote_upload_form helper, for encouraging bad JS practice. It will not be readded.
 
 ============================
 
