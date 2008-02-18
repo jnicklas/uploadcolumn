@@ -5,8 +5,8 @@ begin
 rescue LoadError
 end
 
-describe "a new SanitizedFile" do
-  it "should be empty on empty String, nil, empty StringIO" do
+describe "creating a new SanitizedFile" do
+  it "should yield an empty file on empty String, nil, empty StringIO" do
     UploadColumn::SanitizedFile.new("").should be_empty
     UploadColumn::SanitizedFile.new(StringIO.new("")).should be_empty
     UploadColumn::SanitizedFile.new(nil).should be_empty
@@ -15,27 +15,37 @@ describe "a new SanitizedFile" do
     UploadColumn::SanitizedFile.new(file).should be_empty
   end
 
-  it "should not be empty on valid upload" do
+  it "should yield a non empty file" do
     UploadColumn::SanitizedFile.new(stub_stringio('kerb.jpg', 'image/jpeg')).should_not be_empty
     UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', 'image/jpeg')).should_not be_empty
   end
 
-  it "should sanitize invalid filenames" do
+  it "should not change a valid filename" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "test.jpg"))
     t.filename.should == "test.jpg"
+  end
   
+  it "should remove illegal characters from a filename" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "test-s,%&m#st?.jpg"))
     t.filename.should == "test-s___m_st_.jpg"
+  end
   
+  it "should remove slashes from the filename" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "../../very_tricky/foo.bar"))
     t.filename.should_not =~ /[\\\/]/
-
+  end
+  
+  it "should remove illegal characters if there is no extension" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, '`*foo'))
     t.filename.should == "__foo"
-
+  end
+  
+  it "should remove the path prefix on Windows" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, 'c:\temp\foo.txt'))
     t.filename.should == "foo.txt"
+  end
   
+  it "should make sure the *nix directory thingies can't be used as filenames" do
     t = UploadColumn::SanitizedFile.new(stub_file('kerb.jpg', nil, "."))
     t.filename.should == "_."
   end
@@ -392,7 +402,7 @@ describe "copying a sanitized File object with permissions set" do
   end
 end
 
-describe "copying a sanitized StringIO with permissions set" do
+describe "copying a sanitized file by path with permissions set" do
   before do
     @file = UploadColumn::SanitizedFile.new(file_path('kerb.jpg'), :permissions => 0755)
     @file = @file.copy_to(public_path('gurr.jpg'))
@@ -437,7 +447,7 @@ describe "moving a sanitized File object with permissions set" do
   end
 end
 
-describe "moving a sanitized StringIO with permissions set" do
+describe "moving a sanitized file by path with permissions set" do
   before do
     @file = UploadColumn::SanitizedFile.new(file_path('kerb.jpg'), :permissions => 0755)
     @file.move_to(public_path('gurr.jpg'))
