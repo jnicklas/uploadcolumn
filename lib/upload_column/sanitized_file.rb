@@ -150,9 +150,9 @@ module UploadColumn
     end
     
     def get_content_type_from_mime_types
-      if defined?(MIME::Types)
+      if @extension and defined?(MIME::Types)
         mimes = MIME::Types.of(@extension)
-        return mimes.first.content_type unless mimes.empty?
+        return mimes.first.content_type rescue nil
       end
     end
     
@@ -160,7 +160,7 @@ module UploadColumn
       # Sanitize the filename, to prevent hacking
       name = File.basename(name.gsub("\\", "/")) # work-around for IE
       name.gsub!(/[^a-zA-Z0-9\.\-\+_]/,"_")
-      name = "_#{name}" if name =~ /^\.+$/ # huh? some specific browser fix?
+      name = "_#{name}" if name =~ /^\.+$/
       name = "unnamed" if name.size == 0
       return name.downcase
     end
