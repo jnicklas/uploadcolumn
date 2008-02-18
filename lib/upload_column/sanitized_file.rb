@@ -16,15 +16,10 @@ module UploadColumn
   # or (if you are stuck on Windows) through the MIME::Types library (not to be confused with Rails' Mime class!).
   class SanitizedFile
     
-    DEFAULTS = {
-      :get_content_type_from_file_exec => true,
-      :fix_file_extensions => false
-    }
-    
     attr_reader :basename, :extension
     
     def initialize(file, options = {})
-      @options = DEFAULTS.merge(options)
+      @options = options
       if file && file.instance_of?(String) && !file.empty? 
         @path = file
         self.filename = File.basename(file)

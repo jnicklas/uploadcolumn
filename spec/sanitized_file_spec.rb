@@ -312,37 +312,45 @@ describe "The mime-type of a Sanitized File" do
 
   before do
     @file = stub_file('kerb.jpg', nil, 'harg.css')
-    @sanitized = UploadColumn::SanitizedFile.new(@file)
   end
 
   # TODO: refactor this test so it mocks out system_call
   it "should be determined via *nix exec" do
-    @file.should_not_receive(:content_type)
-    @sanitized.should_not_receive(:extension)
-    @sanitized.should_receive(:get_content_type_from_exec).and_return('image/jpeg')
-    @sanitized.content_type.should == "image/jpeg"
+
+    @sanitized = UploadColumn::SanitizedFile.new(@file, :get_content_type_from_file_exec => true)
+
+    @sanitized.stub!(:path).and_return('/path/to/file.jpg')
+    @sanitized.should_receive(:system_call).with(%(file -bi "/path/to/file.jpg")).and_return('text/monkey')
+
+    @sanitized.content_type.should == "text/monkey"
   end
   
   it "shouldn't choke up when the *nix exec errors out" do
+    @sanitized = UploadColumn::SanitizedFile.new(@file, :get_content_type_from_file_exec => true)
+    
     lambda {
       @sanitized.should_receive(:system_call).and_raise('monkey')
       @sanitized.content_type
-    }.should_not raise_error(Exception)
+    }.should_not raise_error
   end
 
   it "should otherwise be loaded from MIME::Types" do
     if defined?(MIME::Types)
+      @sanitized = UploadColumn::SanitizedFile.new(@file)
+      
       @sanitized.should_receive(:get_content_type_from_exec).and_return(nil) # Make sure the *nix exec isn't interfering
       @sanitized.content_type.should == "text/css"
     else
-      puts "WARNING: Could not run all tests because MIME::Types is not defined, try installing the mime-types gem!"
+      puts "WARNING: Could not run all examples because MIME::Types is not defined, try installing the mime-types gem!"
     end
   end
 
   it "should be taken from the browser if all else fails" do
+    @sanitized = UploadColumn::SanitizedFile.new(@file)
+    
     @file.should_receive(:content_type).at_least(:once).and_return('application/xhtml+xml') # Set up browser behavior
+    # FIXME: this is brittle. There really should be another way of changing this behaviour.
     @sanitized.should_receive(:get_content_type_from_mime_types).and_return(nil) # Make sure MIME::Types isn't interfering
-    @sanitized.should_receive(:get_content_type_from_exec).and_return(nil) # Make sure the *nix exec isn't interfering
     @sanitized.content_type.should == "application/xhtml+xml"
   end
 end
