@@ -110,25 +110,21 @@ describe "all sanitized files", :shared => true do
   end
   
   it "should not have changed its path when copied" do
-    lambda do
-      @file.copy_to(public_path('gurr.jpg'))
-    end.should_not change(@file, :path)
+    running { @file.copy_to(public_path('gurr.jpg')) }.should_not change(@file, :path)
   end
   
   it "should not have changed its filename when copied" do
-    lambda do
-      @file.copy_to(public_path('gurr.jpg'))
-    end.should_not change(@file, :filename)
+    running { @file.copy_to(public_path('gurr.jpg')) }.should_not change(@file, :filename)
   end
   
   it "should return an object of the same class when copied" do
-    @file = @file.copy_to(public_path('gurr.jpg'))
-    @file.should be_an_instance_of(@file.class)
+    new_file = @file.copy_to(public_path('gurr.jpg'))
+    new_file.should be_an_instance_of(@file.class)
   end
   
   it "should adjust the path of the object that is returned when copied" do
-    @file = @file.copy_to(public_path('gurr.jpg'))
-    @file.path.should match_path(public_path('gurr.jpg'))
+    new_file = @file.copy_to(public_path('gurr.jpg'))
+    new_file.path.should match_path(public_path('gurr.jpg'))
   end
 
   it "should adjust the filename of the object that is returned when copied" do
@@ -155,6 +151,17 @@ describe "a sanitized Tempfile" do
   end
 
   it_should_behave_like "all sanitized files"
+  
+  it "should not raise an error when moved to its own location" do
+    running { @file.move_to(@file.path) }.should_not raise_error
+  end
+  
+  it "should return a new instance when copied to its own location" do
+    running {
+      new_file = @file.copy_to(@file.path)
+      new_file.should be_an_instance_of(@file.class)
+    }.should_not raise_error
+  end
   
   it "should exist" do
     @file.should be_in_existence
@@ -191,6 +198,17 @@ describe "a sanitized File object" do
   
   it_should_behave_like "all sanitized files"
   
+  it "should not raise an error when moved to its own location" do
+    running { @file.move_to(@file.path) }.should_not raise_error
+  end
+  
+  it "should return a new instance when copied to its own location" do
+    running {
+      new_file = @file.copy_to(@file.path)
+      new_file.should be_an_instance_of(@file.class)
+    }.should_not raise_error
+  end
+  
   it "should exits" do
     @file.should be_in_existence
   end
@@ -207,6 +225,17 @@ describe "a SanitizedFile opened from a path" do
   end
   
   it_should_behave_like "all sanitized files"
+  
+  it "should not raise an error when moved to its own location" do
+    running { @file.move_to(@file.path) }.should_not raise_error
+  end
+  
+  it "should return a new instance when copied to its own location" do
+    running {
+      new_file = @file.copy_to(@file.path)
+      new_file.should be_an_instance_of(@file.class)
+    }.should_not raise_error
+  end
   
   it "should exits" do
     @file.should be_in_existence

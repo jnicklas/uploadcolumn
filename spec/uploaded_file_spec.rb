@@ -1,11 +1,18 @@
 require File.join(File.dirname(__FILE__), 'spec_helper')
 
-gem 'activerecord'
 require 'active_record'
 
 require File.join(File.dirname(__FILE__), '../lib/upload_column')
 
 ActiveRecord::Base.send(:include, UploadColumn)
+
+describe "uploading a file" do
+  it "should trigger an _after_upload callback" do
+    record = mock('a record')
+    record.should_receive(:avatar_after_upload)
+    @file = UploadColumn::UploadedFile.upload(stub_file('kerb.jpg'), record, :avatar)
+  end
+end
 
 describe "all uploaded files", :shared => true do
   it "should not be empty" do
@@ -173,6 +180,120 @@ describe "an UploadedFile where tmp_dir is a String" do
   end
 end
 
+describe "an UploadedFile where filename is a String" do
+  before do
+    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), nil, nil, :filename => 'monkey.png', :versions => [:thumb, :large])
+  end
+  
+  it "should have the correct filename" do
+    @file.filename.should == 'monkey.png'
+  end
+  
+  it "should remember the actual filename" do
+    @file.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should have versions with the correct filename" do
+    @file.thumb.filename.should == 'monkey.png'
+    @file.large.filename.should == 'monkey.png'
+  end
+end
+
+describe "an UploadedFile where filename is a Proc with the record piped in" do
+  before do
+    record = mock('a record')
+    record.stub!(:name).and_return('quack')
+    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), record, nil, :versions => [:thumb, :large], :filename => proc{ |r| r.name })
+  end
+  
+  it "should have the correct filename" do
+    @file.filename.should == 'quack'
+  end
+  
+  it "should remember the actual filename" do
+    @file.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should have versions with the correct filename" do
+    @file.thumb.filename.should == 'quack'
+    @file.large.filename.should == 'quack'
+  end
+end
+
+describe "an UploadedFile where filename is a Proc with the record and file piped in" do
+  before do
+    record = mock('a record')
+    record.stub!(:name).and_return('quack')
+    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), record, nil, :versions => [:thumb, :large], :filename => proc{ |r, f| "#{r.name}-#{f.basename}-#{f.suffix}quox.#{f.extension}"})
+  end
+  
+  it "should have the correct filename" do
+    @file.filename.should == 'quack-kerb-quox.jpg'
+  end
+  
+  it "should remember the actual filename" do
+    @file.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should have versions with the correct filename" do
+    @file.thumb.filename.should == 'quack-kerb-thumbquox.jpg'
+    @file.large.filename.should == 'quack-kerb-largequox.jpg'
+  end
+end
+
+describe "an UploadedFile with a filename callback" do
+  before do
+    @instance = mock('instance with filename callback')
+    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), @instance, :monkey, :versions => [:thumb, :large])
+  end
+  
+  it "should have the correct filename" do
+    @instance.should_receive(:monkey_filename).with(@file).and_return("llama")
+    @file.filename.should == 'llama'
+  end
+  
+  it "should remember the actual filename" do
+    @file.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should have versions with the correct filename" do
+    @instance.should_receive(:monkey_filename).with(@file.thumb).and_return("barr")
+    @instance.should_receive(:monkey_filename).with(@file.large).and_return("quox")
+    @file.thumb.filename.should == 'barr'
+    @file.large.filename.should == 'quox'
+  end
+end
+
+describe "uploading an UploadedFile where filename is a Proc" do
+  before do
+    record = mock('a record')
+    record.stub!(:name).and_return('quack')
+    @file = UploadColumn::UploadedFile.upload(stub_file('kerb.jpg'), record, nil, :versions => [:thumb, :large], :filename => proc{ |r, f| "#{r.name}-#{f.basename}-#{f.suffix}quox.#{f.extension}"})
+  end
+  
+  it "should have the correct filename" do
+    @file.filename.should == 'quack-kerb-quox.jpg'
+  end
+  
+  it "should remember the actual filename" do
+    @file.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should have versions with the correct filename" do
+    @file.thumb.filename.should == 'quack-kerb-thumbquox.jpg'
+    @file.large.filename.should == 'quack-kerb-largequox.jpg'
+  end
+  
+  it "should have a correct path" do
+    @file.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'quack-kerb-quox.jpg' )
+  end
+  
+  it "should have versions with correct paths" do
+    @file.thumb.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'quack-kerb-thumbquox.jpg' )
+    @file.large.path.should match_path(PUBLIC, 'tmp', /(?:\d+\.)+\d+/, 'quack-kerb-largequox.jpg' )
+  end
+end
+
 describe "an UploadedFile where store_dir is a simple Proc" do
   before do
     @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), nil, nil, :store_dir => proc{'monkey'})
@@ -299,38 +420,6 @@ describe "an UploadedFile with a tmp_dir callback" do
   end
 end
 
-describe "an UploadedFile with a tmp_dir callback" do
-  before do
-    i = mock('instance with a tmp_dir callback')
-    i.should_receive(:monkey_tmp_dir).and_return('gorilla')
-    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), i, :monkey)
-  end
-  
-  it "should have the correct relative tmp dir" do
-    @file.relative_tmp_dir.should == 'gorilla'
-  end
-  
-  it "should have the correct tmp dir" do
-    @file.tmp_dir.should == File.expand_path('gorilla', PUBLIC)
-  end
-end
-
-describe "an UploadedFile with a tmp_dir callback" do
-  before do
-    i = mock('instance with a tmp_dir callback')
-    i.should_receive(:monkey_tmp_dir).and_return('gorilla')
-    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), i, :monkey)
-  end
-  
-  it "should have the correct relative tmp dir" do
-    @file.relative_tmp_dir.should == 'gorilla'
-  end
-  
-  it "should have the correct tmp dir" do
-    @file.tmp_dir.should == File.expand_path('gorilla', PUBLIC)
-  end
-end
-
 describe "an UploadedFile that has just been uploaded" do
 
   before do
@@ -425,6 +514,24 @@ describe "an UploadedFile with a manipulator" do
   
 end
 
+describe "an UploadedFile with a manipulator and versions" do
+  before do
+    a_manipulator = Module.new
+    a_manipulator.send(:define_method, :monkey! ) { |stuff| stuff }
+    @file = UploadColumn::UploadedFile.new(:open, stub_file('kerb.jpg'), nil, :donkey, :versions => [ :thumb, :large ], :manipulator => a_manipulator)
+  end
+  
+  it "should extend the object with the manipulator methods." do
+    @file.should respond_to(:monkey!)
+  end
+  
+  it "should extend the versions with the manipulator methods." do
+    @file.thumb.should respond_to(:monkey!)
+    @file.large.should respond_to(:monkey!)
+  end
+  
+end
+
 describe "an UploadedFile with a manipulator with dependencies" do
 
   it "should extend the object with the manipulator methods and load dependencies." do
@@ -506,9 +613,9 @@ describe "all versions of uploaded files", :shared => true do
     @large.filename.should == "kerb-large.jpg"
   end
 
-  it "should return the basename including the version" do
-    @thumb.basename.should == "kerb-thumb"
-    @large.basename.should == "kerb-large"
+  it "should return the basename without the version" do
+    @thumb.basename.should == "kerb"
+    @large.basename.should == "kerb"
   end
 
   it "should return the extension" do

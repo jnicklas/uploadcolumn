@@ -614,3 +614,65 @@ describe "assigning a file from tmp and saving it with magic columns" do
     @event.image_monkey.should == nil
   end
 end
+
+describe "uploading a file with a filename instruction" do
+  
+  migrate
+  
+  before(:all) do
+    MagicColumnMigration.up
+  end
+  
+  before(:each) do
+    Event.upload_column :image, :filename => 'arg.png'
+    @event = Event.new
+    @event.image = stub_tempfile('kerb.jpg')
+    @event.save
+  end
+  
+  it "should give it the correct filename" do
+    @event.image.filename.should == 'arg.png'
+  end
+  
+  it "should give it the correct path" do
+    @event.image.path.should match_path(PUBLIC, 'image', 'arg.png')
+  end
+end
+
+describe "uploading a file with a complex filename instruction" do
+  
+  migrate
+  
+  before(:all) do
+    MagicColumnMigration.up
+  end
+  
+  before(:each) do
+    Movie.upload_column :image, :filename => proc{ |r, f| "#{r.name}-#{f.basename}-#{f.suffix}quox.#{f.extension}"}, :versions => [:thumb, :large]
+    @movie = Movie.new
+    @movie.name = "indiana_jones"
+    @movie.image = stub_tempfile('kerb.jpg')
+    @movie.save
+  end
+  
+  it "should give it the correct filename" do
+    @movie.image.filename.should == 'indiana_jones-kerb-quox.jpg'
+    @movie.image.thumb.filename.should == 'indiana_jones-kerb-thumbquox.jpg'
+    @movie.image.large.filename.should == 'indiana_jones-kerb-largequox.jpg'
+  end
+  
+  it "should have correct paths" do
+    @movie.image.path.should match_path(PUBLIC, 'image', 'indiana_jones-kerb-quox.jpg' )
+    @movie.image.thumb.path.should match_path(PUBLIC, 'image', 'indiana_jones-kerb-thumbquox.jpg' )
+    @movie.image.large.path.should match_path(PUBLIC, 'image', 'indiana_jones-kerb-largequox.jpg' )
+  end
+  
+  it "should remember the original filename" do
+    @movie.image.actual_filename.should == "kerb.jpg"
+  end
+  
+  it "should store the _original_ filename in the database" do
+    @movie[:image].should == "kerb.jpg"
+  end
+  
+end

@@ -52,7 +52,7 @@ describe "UploadColumn::MagicColumns.set_upload_column_temp_with_magic_columns" 
     @temp_value = '12345.1234.12345/somewhere.png'
     
     @retrieved_file = mock('a retrieved file')
-    @retrieved_file.should_receive(:filename).and_return('walruss.png')
+    @retrieved_file.should_receive(:actual_filename).and_return('walruss.png')
     
     UploadColumn::UploadedFile.should_receive(:retrieve_temp).with(@temp_value, @entry, :avatar, @options).and_return(@retrieved_file)
     @entry.should_receive(:[]=).with(:avatar, 'walruss.png')

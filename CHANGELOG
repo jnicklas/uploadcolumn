@@ -32,13 +32,15 @@ Note: The 0.3 branch is a complete rewrite of everything, with a similar (but no
 
 [CHANGED] _store_dir and _tmp_dir callbacks now take the file object as an argument, which means that the methods always MUST take an argument, even if you don't need it.
 
+[CHANGED] The _after_assigns callback has changed name to _after_upload and take the UploadedFile as param.
+
 [REMOVED] Support for the exif columns, as in 0.2.X has been removed temporarily. It might be readded later.
 
 [REMOVED] The old_files option as in 0.2.X has been removed. All old files are now stored. This option will be reintroduced in later versions of 0.3.X
 
 [REMOVED] The :force_format option for image_columns as in 0.2.X has been removed and will be reintroduced later.
 
-[REMOVED] The remote_upload_form helper, for encouraging bad JS practice. It will not be readded.
+[REMOVED] The remote_upload_form helper has been removed, for encouraging bad JS practice. It will not be readded. If you need remote uploads, uploading with Flash is much cooler, and can be done in an unobtrusive way. Check out Swiff.js for hints.
 
 ============================
 

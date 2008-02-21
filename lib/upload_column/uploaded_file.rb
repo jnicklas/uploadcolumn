@@ -62,6 +62,7 @@ module UploadColumn
       @options = options.reverse_merge(UploadColumn.configuration)
       @instance = instance
       @attribute = attribute
+      @suffix = options[:suffix]
       
       load_manipulator
       
@@ -82,16 +83,19 @@ module UploadColumn
           @temp_name = generate_tmpname
           @new_file = true
           
-          move_to(File.join(tmp_dir, @temp_name, filename))
+          move_to_directory(File.join(tmp_dir, @temp_name))
           
+          # The original is processed before versions are initialized.
           self.process!(@options[:process]) if @options[:process] and self.respond_to?(:process!)
           
           initialize_versions do |version|
-            # Copy the file and store it in the versions array
-            self.copy_to(File.join(self.dir, "#{self.basename}-#{version}.#{self.extension}"))
+            copy_to_version(version)
           end
           
           apply_manipulations_to_versions
+          
+          # trigger the _after_upload callback
+          self.instance.send("#{self.attribute}_after_upload", self) if self.instance.respond_to?("#{self.attribute}_after_upload")
         end
       when :retrieve
         @path = File.join(store_dir, file)
@@ -112,6 +116,7 @@ module UploadColumn
         end
       else
         super(file, @options)
+        initialize_versions
       end
     end
     
@@ -178,7 +183,34 @@ module UploadColumn
       @temp_name
     end
     
+    alias_method :actual_filename, :filename
+    
+    def filename
+      unless bn = parse_dir_options(:filename)
+        bn = [self.basename, self.suffix].compact.join('-')
+        bn += ".#{self.extension}" unless self.extension.blank?
+      end
+      return bn
+    end
+    
+    # TODO: this is a public method, should be specced
+    def move_to_directory(dir)
+      p = File.join(dir, self.filename)
+      if copy_file(p)
+        @path = p
+      end
+    end
+    
     private
+    
+    def copy_to_version(version)
+      copy = self.clone
+      copy.suffix = version
+      
+      if copy_file(File.join(self.dir, copy.filename))
+        return copy
+      end
+    end
     
     def initialize_versions
       if self.options[:versions]
@@ -188,18 +220,21 @@ module UploadColumn
         
         version_keys.each do |version|
           
-          # Raise an error if the version name is a method on this class
-          raise ArgumentError.new("#{version} is an illegal name for an UploadColumn version.") if self.respond_to?(version.to_sym)
+          version = version.to_sym
           
-          @versions[version.to_sym] = if block_given?
-            yield(version)
+          # Raise an error if the version name is a method on this class
+          raise ArgumentError.new("#{version} is an illegal name for an UploadColumn version.") if self.respond_to?(version)
+          
+          if block_given?
+            @versions[version] = yield(version)
           else
             # Copy the file and store it in the versions array
             # TODO: this might result in the manipulator not being loaded.
-            self.class.new(:open, File.join(self.dir, "#{self.basename}-#{version}.#{self.extension}"), instance, attribute, options)
+            @versions[version] = self.clone #class.new(:open, File.join(self.dir, "#{self.basename}-#{version}.#{self.extension}"), instance, attribute, options.merge(:versions => nil, :suffix => version))
+            @versions[version].suffix = version
           end
           
-          @versions[version.to_sym].suffix = version.to_sym
+          @versions[version].instance_eval { @path = File.join(self.dir, self.filename) } # ensure path is not cached
 
           # Add the version methods to the instance
           self.instance_eval <<-SRC
@@ -225,8 +260,8 @@ module UploadColumn
     end
     
     def save
-      self.move_to(File.join(self.store_dir, self.filename))
-      self.versions.each {|version, file| file.move_to(File.join(self.store_dir, file.filename))} if self.versions
+      self.move_to_directory(self.store_dir)
+      self.versions.each { |version, file| file.move_to_directory(self.store_dir) } if self.versions
       @new_file = false
       @temp_name = nil
       true

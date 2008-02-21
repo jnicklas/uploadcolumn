@@ -34,7 +34,7 @@ module UploadColumn
       else
         begin
           if uploaded_file = UploadColumn::UploadedFile.upload(file, self, name, options)
-            self[name] = uploaded_file.filename
+            self[name] = uploaded_file.actual_filename
             @files[name] = uploaded_file
           end
         rescue IntegrityError => e
@@ -53,7 +53,7 @@ module UploadColumn
       return if path.nil? or path.empty?
       unless @files[name] and @files[name].new_file?
         @files[name] = UploadColumn::UploadedFile.retrieve_temp(path, self, name, options)
-        self[name] = @files[name].filename
+        self[name] = @files[name].actual_filename
       end
     end
   
@@ -92,49 +92,20 @@ module UploadColumn
         @upload_columns ||= {}
         @upload_columns[name] = Column.new(name, options)
       
-        # TODO: this method is not very pretty and could definitely use some refactoring :(
-        define_method name do
-          get_upload_column(name)
-        end
-      
-        define_method "#{name}=" do |file|
-          set_upload_column(name, file)
-        end
-      
-        define_method "#{name}_temp" do
-          get_upload_column_temp(name)
-        end
-      
-        define_method "#{name}_temp=" do |path|
-          set_upload_column_temp(name, path)
-        end
-      
-        define_method "#{name}_url" do
-          file = get_upload_column(name)
-          file.url if file
-        end
-      
-        define_method "#{name}_path" do
-          file = get_upload_column(name)
-          file.path if file
-        end
+        define_method( name ) { get_upload_column(name) }
+        define_method( "#{name}=" ) { |file| set_upload_column(name, file) }
+        
+        define_submethod( name, "temp" ) { get_upload_column_temp(name) }      
+        define_submethod( name, "temp=" ) { |path| set_upload_column_temp(name, path) }
+
+        define_submethod( name, "url" ) { get_upload_column(name).url rescue nil }
+        define_submethod( name, "path" ) { get_upload_column(name).path rescue nil }
       
         if options[:versions]
-          options[:versions].each do |k,v|
-            define_method "#{name}_#{k}" do
-              file = get_upload_column(name)
-              file.send(k) if file
-            end
-          
-            define_method "#{name}_#{k}_url" do
-              file = get_upload_column(name)
-              file.send(k).url if file
-            end
-          
-            define_method "#{name}_#{k}_path" do
-              file = get_upload_column(name)
-              file.send(k).path if file
-            end
+          options[:versions].each do |k, v|
+            define_submethod( name, k ) { get_upload_column(name).send(k) rescue nil }
+            define_submethod( name, k, "url" ) { get_upload_column(name).send(k).url rescue nil }
+            define_submethod( name, k, "path" ) { get_upload_column(name).send(k).path rescue nil }
           end
         end
       end
@@ -144,7 +115,7 @@ module UploadColumn
       end
     
       # Validates whether the images extension is in the array passed to :extensions.
-      # By default this is the UploadColumn::EXTENSIONS array
+      # By default this is the UploadColumn.extensions array
       # 
       # Use this to prevent upload of files which could potentially damage your system,
       # such as executables or script files (.rb, .php, etc...).
@@ -166,6 +137,10 @@ module UploadColumn
       end
     
       private
+      
+      def define_submethod(name, *subs, &b)
+        define_method([name, subs].join('_'), &b)
+      end
     
       # This is mostly for testing
       def reset_upload_columns

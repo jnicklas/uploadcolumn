@@ -72,7 +72,7 @@ module UploadColumnSpecHelper
     @file = mock('file')
 
     @uploaded_file = mock('uploaded_file')
-    @uploaded_file.stub!(:filename).and_return('monkey.png')    
+    @uploaded_file.stub!(:actual_filename).and_return('monkey.png')    
   end
 end
 

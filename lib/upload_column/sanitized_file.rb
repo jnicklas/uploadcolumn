@@ -67,6 +67,8 @@ module UploadColumn
     # Moves the file to 'path'
     def move_to(path)
       if copy_file(path)
+        # FIXME: This gets pretty broken in UploadedFile. E.g. moving avatar-thumb.jpg will change the filename
+        # to avatar-thumb-thumb.jpg
         @basename, @extension = split_extension(File.basename(path))
         @file = nil
         @filename = nil
@@ -76,16 +78,9 @@ module UploadColumn
     
     # Copies the file to 'path' and returns a new SanitizedFile that points to the copy.
     def copy_to(path)
-      if copy_file(path)
-        copy = self.clone
-        copy.instance_eval do
-          @basename, @extension = split_extension(File.basename(path))
-          @file = nil
-          @filename = nil
-          @path = path
-        end
-        return copy
-      end
+      copy = self.clone
+      copy.move_to(path)
+      return copy
     end
     
     # Returns the content_type of the file as determined through the MIME::Types library or through a *nix exec.
@@ -107,7 +102,10 @@ module UploadColumn
           @file.rewind # Make sure we are at the beginning of the buffer
           File.open(path, "wb") { |f| f.write(@file.read) }
         else
-          FileUtils.cp(self.path, path)
+          begin
+            FileUtils.cp(self.path, path)
+          rescue ArgumentError
+          end
         end
         File.chmod(@options[:permissions], path) if @options[:permissions]
         return true
