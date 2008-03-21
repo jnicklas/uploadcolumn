@@ -159,12 +159,13 @@ module UploadColumn
     end
     
     # returns the url of the file, by merging the relative path with the web_root option.
-    def url
+    def public_path
       # TODO: this might present an attack vector if the file is outside the web_root
       options[:web_root].to_s + '/' + self.relative_path.gsub("\\", "/")
     end
     
-    alias_method :to_s, :url
+    alias_method :to_s, :public_path
+    alias_method :url, :public_path
     
     # this is the value returned when avatar_temp is called, where avatar is an upload_column 
     def temp_value #:nodoc:

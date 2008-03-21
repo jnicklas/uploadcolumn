@@ -98,13 +98,13 @@ module UploadColumn
         define_submethod( name, "temp" ) { get_upload_column_temp(name) }      
         define_submethod( name, "temp=" ) { |path| set_upload_column_temp(name, path) }
 
-        define_submethod( name, "url" ) { get_upload_column(name).url rescue nil }
+        define_submethod( name, "public_path" ) { get_upload_column(name).public_path rescue nil }
         define_submethod( name, "path" ) { get_upload_column(name).path rescue nil }
       
         if options[:versions]
           options[:versions].each do |k, v|
             define_submethod( name, k ) { get_upload_column(name).send(k) rescue nil }
-            define_submethod( name, k, "url" ) { get_upload_column(name).send(k).url rescue nil }
+            define_submethod( name, k, "public_path" ) { get_upload_column(name).send(k).public_path rescue nil }
             define_submethod( name, k, "path" ) { get_upload_column(name).send(k).path rescue nil }
           end
         end

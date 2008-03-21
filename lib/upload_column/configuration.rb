@@ -2,8 +2,8 @@ module UploadColumn
   
   mattr_accessor :configuration, :image_column_configuration, :extensions, :image_extensions
   
-  self.extensions = %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip).freeze
-  self.image_extensions = %w(jpg jpeg gif png).freeze
+  self.extensions = %w(asf ai avi doc dvi dwg eps gif gz jpg jpeg mov mp3 mpeg odf pac pdf png ppt psd swf swx tar tar.gz torrent txt wmv wav xls zip)
+  self.image_extensions = %w(jpg jpeg gif png)
   
   DEFAULT_CONFIGURATION = {
     :tmp_dir => 'tmp',
@@ -38,8 +38,11 @@ module UploadColumn
   
   class ConfigurationProxy  
     def method_missing(method, value)
-      name = method.to_s.scan(/^(.*?)=$/).first.first.to_sym
-      UploadColumn.configuration[name] = value
+      if name = (method.to_s.match(/^(.*?)=$/) || [])[1]
+        UploadColumn.configuration[name.to_sym] = value
+      else
+        super
+      end
     end
   end
   

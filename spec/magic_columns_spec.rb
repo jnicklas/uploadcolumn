@@ -21,13 +21,13 @@ describe "UploadColumn::MagicColumns.set_upload_column_with_magic_columns" do
   it "should assign methods from the uploaded file to database columns" do
     Entry.should_receive(:column_names).and_return([ 'monkey', 'llama', 'avatar_path', 'avatar_size'])
     
-    @uploaded_file.should_receive(:path).and_return('/path/to/my/file')
-    @uploaded_file.should_receive(:size).and_return(9999)
-    
-    @entry.should_receive(:avatar_path=).with('/path/to/my/file')
-    @entry.should_receive(:avatar_size=).with(9999)
+    @uploaded_file.stub!(:path).and_return('/path/to/my/file')
+    @uploaded_file.stub!(:size).and_return(9999)
     
     @entry.avatar = @file
+
+    @entry.avatar_path.should == '/path/to/my/file'
+    @entry.avatar_size.should == 9999
   end
   
   it "should do nothing when the column names do not exist on the object" do
@@ -35,10 +35,10 @@ describe "UploadColumn::MagicColumns.set_upload_column_with_magic_columns" do
     
     @uploaded_file.stub!(:size).and_return(9999)
     
-    @entry.should_not_receive(:avatar_monkey=)
-    @entry.should_receive(:avatar_size=).with(9999)
+    @entry.avatar = @file
     
-    @entry.avatar = @file    
+    @entry.avatar_monkey.should be_nil
+    @entry.avatar_size.should == 9999
   end
 end
 
@@ -64,10 +64,10 @@ describe "UploadColumn::MagicColumns.set_upload_column_temp_with_magic_columns" 
     @retrieved_file.stub!(:path).and_return('/path/to/my/file')
     @retrieved_file.stub!(:size).and_return(9999)
     
-    @entry.should_receive(:avatar_path=).with('/path/to/my/file')
-    @entry.should_receive(:avatar_size=).with(9999)
-    
     @entry.avatar_temp = @temp_value
+    
+    @entry.avatar_path.should == '/path/to/my/file'
+    @entry.avatar_size.should == 9999
   end
   
   it "should do nothing when the column names do not exist on the object" do
@@ -75,10 +75,10 @@ describe "UploadColumn::MagicColumns.set_upload_column_temp_with_magic_columns" 
     
     @retrieved_file.stub!(:size).and_return(9999)
     
-    @entry.should_not_receive(:avatar_monkey=)
-    @entry.should_receive(:avatar_size=).with(9999)
-    
     @entry.avatar_temp = @temp_value
+    
+    @entry.avatar_monkey.should be_nil
+    @entry.avatar_size.should == 9999
   end
 end
 
@@ -96,13 +96,13 @@ describe "UploadColumn::MagicColumns.save_uploaded_files_with_magic_columns" do
   it "should reevaluate magic columns" do
     Entry.stub!(:column_names).and_return([ 'monkey', 'llama', 'avatar_path', 'avatar_size'])
     
-    @uploaded_file.should_receive(:path).and_return('/path/to/my/file')
-    @uploaded_file.should_receive(:size).and_return(9999)
+    @uploaded_file.stub!(:path).and_return('/path/to/my/file')
+    @uploaded_file.stub!(:size).and_return(9999)
     
-    @entry.should_receive(:avatar_path=).with('/path/to/my/file')
-    @entry.should_receive(:avatar_size=).with(9999)
+    @entry.send(:save_uploaded_files)
     
-    @entry.save_uploaded_files
+    @entry.avatar_path.should == '/path/to/my/file'
+    @entry.avatar_size.should == 9999
   end
   
   it "should do nothing when the column names do not exist on the object" do
@@ -110,10 +110,10 @@ describe "UploadColumn::MagicColumns.save_uploaded_files_with_magic_columns" do
     
     @uploaded_file.stub!(:size).and_return(9999)
     
-    @entry.should_not_receive(:avatar_monkey=)
-    @entry.should_receive(:avatar_size=).with(9999)
+    @entry.send(:save_uploaded_files)
     
-    @entry.save_uploaded_files
+    @entry.avatar_monkey.should be_nil
+    @entry.avatar_size.should == 9999
   end
   
 end

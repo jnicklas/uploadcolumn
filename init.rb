@@ -3,11 +3,8 @@
 # add the upload_column extensions to rails
 
 require File.join(File.dirname(__FILE__), 'lib', 'upload_column')
-require File.join(File.dirname(__FILE__), 'lib', 'upload_column', 'upload_column_helper')
-require File.join(File.dirname(__FILE__), 'lib', 'upload_column', 'upload_column_render_helper')
-
-ActionView::Base.send(:include, UploadColumnHelper)
-ActionController::Base.send(:include, UploadColumnRenderHelper)
+require File.join(File.dirname(__FILE__), 'lib', 'upload_column', 'rails', 'upload_column_helper')
+require File.join(File.dirname(__FILE__), 'lib', 'upload_column', 'rails', 'action_controller_extension')
 
 Mime::Type.register "image/png", :png
 Mime::Type.register "image/jpeg", :jpg

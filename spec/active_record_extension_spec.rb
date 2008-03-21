@@ -355,8 +355,8 @@ describe "an upload column with no file" do
     @entry.avatar_temp.should be_nil
   end
   
-  it "should return nothing in the _url method" do
-    @entry.avatar_url.should == nil
+  it "should return nothing in the _public_path method" do
+    @entry.avatar_public_path.should == nil
   end
   
   it "should return nothing in the _path method" do
@@ -374,9 +374,9 @@ describe "an upload column with an uploaded file" do
     @entry.avatar = @file
   end
   
-  it "should delegate the _url method to the column" do
-    @uploaded_file.should_receive(:url).and_return('/url/to/file.exe')
-    @entry.avatar_url.should == '/url/to/file.exe'
+  it "should delegate the _public_path method to the column" do
+    @uploaded_file.should_receive(:public_path).and_return('/url/to/file.exe')
+    @entry.avatar_public_path.should == '/url/to/file.exe'
   end
   
   it "should delegate the _path method to the column" do
@@ -403,7 +403,7 @@ describe "an upload column with different versions and no uploaded file" do
   end
   
   it "should return nil for the _thumb_url method" do
-    @entry.avatar_thumb_url.should == nil
+    @entry.avatar_thumb_public_path.should == nil
   end
   
   it "should return nil for the _large_path method" do
@@ -436,10 +436,10 @@ describe "an upload column with different versions and an uploaded file" do
   
   it "should delegate the _thumb_url method to the column" do
     thumb = mock('thumb')
-    thumb.should_receive(:url).and_return('/url/to/file.exe')
+    thumb.should_receive(:public_path).and_return('/url/to/file.exe')
     @uploaded_file.should_receive(:thumb).and_return(thumb)
     
-    @entry.avatar_thumb_url.should == '/url/to/file.exe'
+    @entry.avatar_thumb_public_path.should == '/url/to/file.exe'
   end
   
   it "should delegate the _large_path method to the column" do

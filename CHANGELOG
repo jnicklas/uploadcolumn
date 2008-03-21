@@ -16,7 +16,9 @@ Note: The 0.3 branch is a complete rewrite of everything, with a similar (but no
 
 [NEW] Fully tested with RSpec
 
-[NEW] Following the law of Demeter better by adding _url, _thumb, _thumb_url etc... magic methods.
+[NEW] Following the law of Demeter better by adding _public_path, _thumb, _thumb_public_path etc... magic methods.
+
+[DEPRECATED] UploadedFile#url is deprecated in favour of UploadedFile#public_path and will be removed in the next major release
 
 [CHANGED] Store dir and temp dir procs now take two piped variables, the UploadedFile object and the ActiveRecord
 

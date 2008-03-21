@@ -28,14 +28,22 @@ module UploadColumn
     private
     
     def evaluate_magic_columns_for_upload_column(name)
+      
       self.class.column_names.each do |column_name|
-        if predicate = column_name.scan(/^#{name}_([a-z0-9_?!]+)$/).first
-          predicate = predicate.first
-          self.instance_eval <<-SRC
-            self.#{column_name} = self.#{name}.#{predicate} if self.#{name}.respond_to?(:#{predicate})
-          SRC
+        
+        statement, predicate = column_name.split('_', 2)
+        
+        if statement and predicate and name.to_s == statement
+          uploaded_file = self.send(:get_upload_column, name.to_sym)
+          
+          self.write_attribute(column_name.to_sym, handle_predicate(uploaded_file, predicate));
         end
+        
       end
+    end
+    
+    def handle_predicate(uploaded_file, predicate)
+      return uploaded_file.send(predicate.to_sym) if uploaded_file.respond_to?(predicate.to_sym)
     end
   
   end

@@ -51,3 +51,5 @@ class ActionView::Helpers::FormBuilder #:nodoc:
     @template.send(:upload_column_field, @object_name, method, options.merge(:object => @object))
   end 
 end
+
+ActionView::Base.send(:include, UploadColumnHelper)

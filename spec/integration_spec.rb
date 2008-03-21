@@ -26,29 +26,33 @@ class TestMigration < ActiveRecord::Migration
       t.column :name, :string
       t.column :description, :text
     end
+    
+    create_table :shrooms, :force => true do |t|
+      t.column :image, :string
+      t.column :image_size, :integer
+      t.column :image_public_path, :string
+      t.column :image_path, :string
+      t.column :image_monkey, :string      
+    end
   end
 
   def self.down
     drop_table :events
     drop_table :movies
-  end
-end
-
-class MagicColumnMigration < ActiveRecord::Migration
-  def self.up
-    add_column :events, :image_size, :integer
-    add_column :events, :image_url, :string
-    add_column :events, :image_path, :string
-    add_column :events, :image_monkey, :string
-    Event.reset_column_information
+    drop_table :shrooms
   end
 end
 
 class Event < ActiveRecord::Base; end # setup a basic AR class for testing
 class Movie < ActiveRecord::Base; end # setup a basic AR class for testing
+class Shroom < ActiveRecord::Base; end # setup a basic AR class for testing
 
 def migrate
-  before(:all) { TestMigration.up }
+  before(:all) do
+    TestMigration.down rescue nil
+    TestMigration.up
+  end
+  
   after(:all) { TestMigration.down }
 end
 
@@ -493,29 +497,26 @@ describe "uploading a file with magic columns" do
   
   migrate
   
-  before(:all) do
-    MagicColumnMigration.up
-  end
-  
   before(:each) do
-    @event = Event.new
-    @event.image = stub_tempfile('kerb.jpg')
+    Shroom.upload_column :image
+    @shroom = Shroom.new
+    @shroom.image = stub_tempfile('kerb.jpg')
+  end
+
+  it "should automatically set the image path" do
+    @shroom.image_path.should == @shroom.image.path    
   end
   
   it "should automatically set the image size" do
-    @event.image_size.should == @event.image.size    
+    @shroom.image_size.should == @shroom.image.size    
   end
   
-  it "should automatically set the image path" do
-    @event.image_path.should == @event.image.path    
-  end
-  
-  it "should automatically set the image url" do
-    @event.image_url.should == @event.image.url    
+  it "should automatically set the image public path" do
+    @shroom.image_public_path.should == @shroom.image.public_path    
   end
   
   it "should ignore columns whose names aren't methods on the column" do
-    @event.image_monkey.should == nil
+    @shroom.image_monkey.should == nil
   end
 end
 
@@ -523,31 +524,28 @@ describe "assigning a file from tmp with magic columns" do
   
   migrate
   
-  before(:all) do
-    MagicColumnMigration.up
-  end
-  
   before(:each) do
-    e1 = Event.new
+    Shroom.upload_column :image
+    e1 = Shroom.new
     e1.image = stub_tempfile('kerb.jpg')
-    @event = Event.new
-    @event.image_temp = e1.image_temp
+    @shroom = Shroom.new
+    @shroom.image_temp = e1.image_temp
   end
   
   it "should automatically set the image size" do
-    @event.image_size.should == @event.image.size    
+    @shroom.image_size.should == @shroom.image.size    
   end
   
   it "should automatically set the image path" do
-    @event.image_path.should == @event.image.path    
+    @shroom.image_path.should == @shroom.image.path    
   end
   
-  it "should automatically set the image url" do
-    @event.image_url.should == @event.image.url    
+  it "should automatically set the image public path" do
+    @shroom.image_public_path.should == @shroom.image.public_path
   end
   
   it "should ignore columns whose names aren't methods on the column" do
-    @event.image_monkey.should == nil
+    @shroom.image_monkey.should == nil
   end
 end
 
@@ -555,30 +553,27 @@ describe "uploading and saving a file with magic columns" do
   
   migrate
   
-  before(:all) do
-    MagicColumnMigration.up
-  end
-  
   before(:each) do
-    @event = Event.new
-    @event.image = stub_tempfile('kerb.jpg')
-    @event.save
+    Shroom.upload_column :image
+    @shroom = Shroom.new
+    @shroom.image = stub_tempfile('kerb.jpg')
+    @shroom.save
   end
   
   it "should automatically set the image size" do
-    @event.image_size.should == @event.image.size    
+    @shroom.image_size.should == @shroom.image.size    
   end
   
   it "should automatically set the image path" do
-    @event.image_path.should == @event.image.path    
+    @shroom.image_path.should == @shroom.image.path    
   end
   
-  it "should automatically set the image url" do
-    @event.image_url.should == @event.image.url    
+  it "should automatically set the image public path" do
+    @shroom.image_public_path.should == @shroom.image.public_path   
   end
   
   it "should ignore columns whose names aren't methods on the column" do
-    @event.image_monkey.should == nil
+    @shroom.image_monkey.should == nil
   end
 end
 
@@ -586,42 +581,35 @@ describe "assigning a file from tmp and saving it with magic columns" do
   
   migrate
   
-  before(:all) do
-    MagicColumnMigration.up
-  end
-  
   before(:each) do
-    e1 = Event.new
+    Shroom.upload_column :image
+    e1 = Shroom.new
     e1.image = stub_tempfile('kerb.jpg')
-    @event = Event.new
-    @event.image_temp = e1.image_temp
-    @event.save
+    @shroom = Shroom.new
+    @shroom.image_temp = e1.image_temp
+    @shroom.save
   end
   
   it "should automatically set the image size" do
-    @event.image_size.should == @event.image.size    
+    @shroom.image_size.should == @shroom.image.size    
   end
   
   it "should automatically set the image path" do
-    @event.image_path.should == @event.image.path    
+    @shroom.image_path.should == @shroom.image.path    
   end
   
-  it "should automatically set the image url" do
-    @event.image_url.should == @event.image.url    
+  it "should automatically set the image public path" do
+    @shroom.image_public_path.should == @shroom.image.public_path    
   end
   
   it "should ignore columns whose names aren't methods on the column" do
-    @event.image_monkey.should == nil
+    @shroom.image_monkey.should == nil
   end
 end
 
 describe "uploading a file with a filename instruction" do
   
   migrate
-  
-  before(:all) do
-    MagicColumnMigration.up
-  end
   
   before(:each) do
     Event.upload_column :image, :filename => 'arg.png'
@@ -642,10 +630,6 @@ end
 describe "uploading a file with a complex filename instruction" do
   
   migrate
-  
-  before(:all) do
-    MagicColumnMigration.up
-  end
   
   before(:each) do
     Movie.upload_column :image, :filename => proc{ |r, f| "#{r.name}-#{f.basename}-#{f.suffix}quox.#{f.extension}"}, :versions => [:thumb, :large]
