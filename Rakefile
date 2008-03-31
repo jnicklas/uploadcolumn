@@ -47,13 +47,6 @@ end
 desc 'Default: run unit tests.'
 task :default => 'spec:rcov'
 
-desc 'Test the UploadColumn plugin.'
-Rake::TestTask.new(:test) do |t|
-  t.libs << 'lib'
-  t.pattern = 'test/**/*_test.rb'
-  t.verbose = true
-end
-
 namespace "doc" do
   
   desc 'Generate documentation for the UploadColumn plugin.'

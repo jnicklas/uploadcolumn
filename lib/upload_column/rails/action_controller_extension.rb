@@ -58,4 +58,4 @@ module UploadColumn::ActionControllerExtension
   end
 end
 
-ActionController::Base.send(:include, ActionControllerExtension)
+ActionController::Base.send(:include, UploadColumn::ActionControllerExtension)
