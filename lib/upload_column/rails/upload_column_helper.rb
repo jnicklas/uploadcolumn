@@ -17,12 +17,23 @@ module UploadColumnHelper
   end
   
   # A helper method for creating a form tag to use with uploadng files,
-  # it works exactly like Rails' start_form_tag, except that :multipart is always true
+  # it works exactly like Rails' form_tag, except that :multipart is always true
   def upload_form_tag(url_for_options = {}, options = {}, *parameters_for_url, &proc)
     options[:multipart] = true
     form_tag( url_for_options, options, *parameters_for_url, &proc )
   end
   
+  # A helper method for creating a form tag to use with uploadng files,
+  # it works exactly like Rails' form_for, except that :multipart is always true
+  def upload_form_for(*args, &block)
+    options = args.extract_options!
+    options[:html] ||= {}
+    options[:html][:multipart] = true
+    args.push(options)
+    
+    form_for(*args, &block)
+  end
+
   # Returns an image tag using a URL created by the set of +options+. Accepts the same options
   # as ActionController::Base#url_for. It's also possible to pass a string instead of an options
   # hash.
