@@ -33,10 +33,10 @@ module UploadColumn
         
         statement, predicate = column_name.split('_', 2)
         
-        if statement and predicate and name.to_s == statement
+        if statement and predicate and name.to_s == statement and not self.read_attribute(column_name.to_sym)
           uploaded_file = self.send(:get_upload_column, name.to_sym)
           
-          self.write_attribute(column_name.to_sym, handle_predicate(uploaded_file, predicate));
+          self.write_attribute(column_name.to_sym, handle_predicate(uploaded_file, predicate))
         end
         
       end

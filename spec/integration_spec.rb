@@ -33,6 +33,7 @@ class TestMigration < ActiveRecord::Migration
       t.column :image_public_path, :string
       t.column :image_path, :string
       t.column :image_monkey, :string      
+      t.column :image_extension, :string      
     end
   end
 
@@ -556,6 +557,7 @@ describe "uploading and saving a file with magic columns" do
   before(:each) do
     Shroom.upload_column :image
     @shroom = Shroom.new
+    @shroom.image_extension = "Some other Extension"
     @shroom.image = stub_tempfile('kerb.jpg')
     @shroom.save
   end
@@ -574,6 +576,10 @@ describe "uploading and saving a file with magic columns" do
   
   it "should ignore columns whose names aren't methods on the column" do
     @shroom.image_monkey.should == nil
+  end
+  
+  it "should ignore columns who already have a value set" do
+    @shroom.image_extension.should == "Some other Extension"
   end
 end
 
