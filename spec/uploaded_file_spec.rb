@@ -1040,3 +1040,14 @@ describe "the temp_value of a retrieved temporary UploadedFile" do
     @file.temp_value.should == '12345.1234.12345/kerb.jpg'
   end
 end
+
+describe "the temp_value of an UploadedFile that is not temporary" do
+  
+  setup do
+    @file = UploadColumn::UploadedFile.retrieve('kerb.jpg', nil, :donkey)
+  end
+  
+  it "should be mainatained" do
+    @file.temp_value.should be_nil
+  end
+end

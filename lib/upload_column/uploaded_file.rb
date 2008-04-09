@@ -169,10 +169,12 @@ module UploadColumn
     
     # this is the value returned when avatar_temp is called, where avatar is an upload_column 
     def temp_value #:nodoc:
-      if original_filename
-        %(#{@temp_name}/#{filename};#{original_filename})
-      else
-        %(#{@temp_name}/#{filename})
+      if tempfile?
+        if original_filename
+          %(#{@temp_name}/#{filename};#{original_filename})
+        else
+          %(#{@temp_name}/#{filename})
+        end
       end
     end
     
