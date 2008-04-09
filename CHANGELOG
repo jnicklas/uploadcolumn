@@ -44,6 +44,8 @@ Note: The 0.3 branch is a complete rewrite of everything, with a similar (but no
 
 [REMOVED] The remote_upload_form helper has been removed, for encouraging bad JS practice. It will not be readded. If you need remote uploads, uploading with Flash is much cooler, and can be done in an unobtrusive way. Check out Swiff.js for hints.
 
+[REMOVED] The 'image' helper has been removed, since its functionality is not really useful in any app (hopefully most apps) that uses named routes.
+
 ============================
 
 0.2.1
