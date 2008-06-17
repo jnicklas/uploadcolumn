@@ -56,7 +56,7 @@ module UploadColumn
     
     # Checks if the file is empty.
     def empty?
-      (@file.nil? && @path.nil?) || self.size.zero?
+      (@file.nil? && @path.nil?) || self.size.nil? || self.size.zero?
     end
     
     # Checks if the file exists

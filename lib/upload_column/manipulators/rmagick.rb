@@ -14,10 +14,10 @@ module UploadColumn
       def process!(instruction = nil, &block)
         if instruction.is_a?(Proc)
           manipulate!(&instruction)
-        elsif instruction.to_s =~ /^c(\d+x\d+)/
+        elsif instruction.to_s =~ /^c(\d+x\d+)$/
           crop_resized!($1)
-        elsif instruction.to_s =~ /\d+x\d+/
-          resize!(instruction)
+        elsif instruction.to_s =~ /^(\d+x\d+)$/
+          resize!($1)
         end
         manipulate!(&block) if block
       end
