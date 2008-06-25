@@ -1,11 +1,11 @@
 module UploadColumn
   module MagicColumns
   
-    def self.append_features(base)
+    def self.included(base)
       super
-      base.alias_method_chain :set_upload_column, :magic_columns
-      base.alias_method_chain :set_upload_column_temp, :magic_columns
-      base.alias_method_chain :save_uploaded_files, :magic_columns
+      base.send :alias_method_chain, :set_upload_column, :magic_columns
+      base.send :alias_method_chain, :set_upload_column_temp, :magic_columns
+      base.send :alias_method_chain, :save_uploaded_files, :magic_columns
     end
   
     def set_upload_column_with_magic_columns(name, file)
