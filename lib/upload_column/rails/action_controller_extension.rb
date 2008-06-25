@@ -1,7 +1,7 @@
 module UploadColumn::ActionControllerExtension
 
   def self.included(base)
-    base.alias_method_chain :url_for, :uploaded_file_check
+    base.send :alias_method_chain, :url_for, :uploaded_file_check
     base.helper_method :url_for_path
   end
   

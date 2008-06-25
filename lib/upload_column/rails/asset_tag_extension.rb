@@ -1,7 +1,7 @@
 module UploadColumn::AssetTagExtension
   
   def self.included(base)
-    base.alias_method_chain :image_tag, :uploaded_file_check
+    base.send :alias_method_chain, :image_tag, :uploaded_file_check
   end
   
   def image_tag_with_uploaded_file_check(source, options = {})
